@@ -4,16 +4,19 @@
 #   sautobuild -- automatically build a multi-arch Debian repository using sbuild
 #
 # SYNOPSIS
-#   sautobuild [ --help | -h ] [ --manual | -m ]
-#              [ --strict | -s ] [ --update | -u ]
-#              [ --origin | -O <origin> ] [ -L | --label <label> ] 
-#              [  -C | --components <components ] <source directory>
+#   sautobuild [ --help | -h ] [ --manual | -m ] [ --distribution | -d <dist> ]
+#              [ --strict | -s ] [ --update | -u ] [ --origin | -O <origin> ]
+#              [ --label | -L <label> ] [ -n | --no-repo ]
+#              [ --components | -C <components> ] <source directory>
 #
 # OPTIONS
 #
 # --help, -h             Show a short help message
 #
 # --manual, -m           Show this manual
+#
+# --distribution, -d <distro>  Specify the distribution rather than reading it
+#                              from debian/changelog
 #
 # --strict, -s           Enable strict Lintian checking of produced packages.
 #                        Causes the build process to exit with the Lintian exit
@@ -24,8 +27,9 @@
 #                        build starts.
 #
 # --origin, -O <origin>  Sets the Origin: field in the Release file of
-#                        the final repository. Defaults to "Unknown".
-#  
+#                        the final repository. Defaults to the build machine's
+#                        hostname.
+# 
 # --label, -L <label>    Sets the Label: field in the Release file.  Defaults
 #                        to "Unknown".
 #
@@ -60,6 +64,28 @@
 # build in. This script forms part of the Ubuntu package "ubuntu-dev-tools",
 # available in lucid (10.10) onwards.
 #
+# USING THE PACKAGES
+#
+# It is possible to use the packages straight from your new repository. Simply
+# add
+#
+#   deb <path to your repo> ./
+#
+# to your apt sources list.
+#
+# It is also possible to prevent automatic upgrades to packages from this
+# repository thanks to "pinning". By default the "origin" of the packages is
+# set to the hostname where the builds happen, so it is possible to pin using
+# this information. For example, assuming the build host is called
+# "build.host", then adding the following will allow installation of packages
+# from your new machine, while preventing further automatic upgrades.
+#
+#  Package: *
+#  Pin: release o=build.host
+#  Pin-Priority: 50
+#
+# See apt_preferences(5) for more information.
+#
 # BUGS
 #
 # Extra flags for sbuild and lintian cannot be passed.
@@ -68,7 +94,7 @@
 #
 # SEE ALSO
 #
-# sbuild(1), schroot(1), lintian(1), mk-sbuild(1)
+# sbuild(1), schroot(1), lintian(1), mk-sbuild(1), apt_preferences(5)
 #
 # AUTHOR
 #
@@ -76,6 +102,7 @@
 #
 
 require 'sautobuild'
+require 'socket'
 
 def error(msg)
   STDERR.print "*** Error: #{msg}\n"
@@ -83,17 +110,23 @@ def error(msg)
   exit 1
 end
 
-help = manual = verbose = version = strict = update_chroot = do_make_repo = false
+no_repo = help = manual = verbose = version = strict = update_chroot = do_make_repo = false
 
 components = "main"
-origin = "Unknown"
+#
+# Origin defaults to the hostname.
+#
+origin = Socket.gethostname
 label = "Unknown"
+distribution = nil
 
 opts = GetoptLong.new(
   ['-h', '--help',    GetoptLong::NO_ARGUMENT],
   ['-m', '--manual', GetoptLong::NO_ARGUMENT],
   ['-s', '--strict', GetoptLong::NO_ARGUMENT],
   ['-u', '--update', GetoptLong::NO_ARGUMENT],
+  ['-n', '--no-repo', GetoptLong::NO_ARGUMENT],
+  ['-d', '--distribution', GetoptLong::OPTIONAL_ARGUMENT],
   ['-O', '--origin', GetoptLong::OPTIONAL_ARGUMENT],
   ['-L', '--label', GetoptLong::OPTIONAL_ARGUMENT],
   ['-C', '--components', GetoptLong::OPTIONAL_ARGUMENT]
@@ -108,8 +141,12 @@ case opt
     verbose = true
   when "-s"
     strict = true
+  when "-d"
+    distribution = arg
   when "-u"
     update_chroot = true
+  when "-n"
+    no_repo = true
   when "-O"
     origin = arg
   when "-L"
@@ -151,10 +188,11 @@ exit 0 if help or version or manual
 begin
   pkg = Sautobuild.new(source_dir)
   pkg.update_chroot = update_chroot
+  pkg.distribution = distribution
   pkg.build
   pkg.check(strict)
 
-  if label or origin or components
+  unless no_repo
     pkg.make_repo(:label => label, :origin => origin, :components => components)
   end
 rescue StandardError => ex
