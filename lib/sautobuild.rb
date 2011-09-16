@@ -145,8 +145,8 @@ class Sautobuild
 
     IO.popen("schroot -l") do |io|
      io.readlines.each do |l|
-        dist, *arch = l.chomp.split("-")
-        arch = arch.join("-")
+        next unless l =~ /^(?:(?:chroot|source):)?([^-]+)-(.*)$/
+        dist, arch = [$1, $2]
         next unless valid_architectures.include?(arch)
         dists << dist unless dists.include?(dist)
         archs << arch unless archs.include?(arch)
