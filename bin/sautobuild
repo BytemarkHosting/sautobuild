@@ -1,0 +1,165 @@
+#!/usr/bin/ruby
+#
+# NAME
+#   sautobuild -- automatically build a multi-arch Debian repository using sbuild
+#
+# SYNOPSIS
+#   sautobuild [ --help | -h ] [ --manual | -m ]
+#              [ --strict | -s ] [ --update | -u ]
+#              [ --origin | -O <origin> ] [ -L | --label <label> ] 
+#              [  -C | --components <components ] <source directory>
+#
+# OPTIONS
+#
+# --help, -h             Show a short help message
+#
+# --manual, -m           Show this manual
+#
+# --strict, -s           Enable strict Lintian checking of produced packages.
+#                        Causes the build process to exit with the Lintian exit
+#                        code if the Lintian check fails.
+#
+# --update, -u           Passes sbuild(1) the --apt-update flag, causing an
+#                        apt-get update to be run in the chroot before the
+#                        build starts.
+#
+# --origin, -O <origin>  Sets the Origin: field in the Release file of
+#                        the final repository. Defaults to "Unknown".
+#  
+# --label, -L <label>    Sets the Label: field in the Release file.  Defaults
+#                        to "Unknown".
+#
+# --components, -C <components>  Sets the Components: field in the Release
+#                                file. Defaults to "main".
+#
+# USAGE
+#
+# This program can be used to create a Debian repository from a Debian source
+# directory. Given an appropriately created set of schroot(1) environments,
+# sautobuild will build the package for all appropriate architectures,
+# including source tarballs.
+#
+# If "label", "origin", or "components" are specified, it will then generate
+# the required Packages, Sources, and Release files in order to create a Debian
+# repository.
+#
+# ASSUMPTIONS
+#
+# It is assumed that the distribution can be calculated from the latest entry
+# of the "debian/changelog".
+#
+# It is assumed that the schroots are named in a convention of
+# <distribution>-<architecture>, for example "stable-amd64", or "natty-i386".
+# Also, for archtecture-independent packages, there is a schroot just named
+# after the distribution, e.g. "stable", or "natty". Use the "aliases"
+# directive in your schroot configuration to do this.
+#
+# SETTING UP SCHROOTS
+#
+# It is recommended to use mk-sbuild(1) to set up a collection of chroots to
+# build in. This script forms part of the Ubuntu package "ubuntu-dev-tools",
+# available in lucid (10.10) onwards.
+#
+# BUGS
+#
+# Extra flags for sbuild and lintian cannot be passed.
+#
+# Release and changes files cannot be signed automatically.
+#
+# SEE ALSO
+#
+# sbuild(1), schroot(1), lintian(1), mk-sbuild(1)
+#
+# AUTHOR
+#
+# Patrick J Cherry <patrick@bytemark.co.uk>
+#
+
+require 'sautobuild'
+
+def error(msg)
+  STDERR.print "*** Error: #{msg}\n"
+  STDERR.print "*** For help, type: #{$0} -h\n"
+  exit 1
+end
+
+help = manual = verbose = version = strict = update_chroot = do_make_repo = false
+
+components = "main"
+origin = "Unknown"
+label = "Unknown"
+
+opts = GetoptLong.new(
+  ['-h', '--help',    GetoptLong::NO_ARGUMENT],
+  ['-m', '--manual', GetoptLong::NO_ARGUMENT],
+  ['-s', '--strict', GetoptLong::NO_ARGUMENT],
+  ['-u', '--update', GetoptLong::NO_ARGUMENT],
+  ['-O', '--origin', GetoptLong::OPTIONAL_ARGUMENT],
+  ['-L', '--label', GetoptLong::OPTIONAL_ARGUMENT],
+  ['-C', '--components', GetoptLong::OPTIONAL_ARGUMENT]
+).each do |opt,arg|
+
+case opt
+  when  "-h"
+    help = true
+  when "-m"
+    manual = true
+  when "-v"
+    verbose = true
+  when "-s"
+    strict = true
+  when "-u"
+    update_chroot = true
+  when "-O"
+    origin = arg
+  when "-L"
+    label = arg
+  when "-C"
+    components = arg
+  end
+end
+
+source_dir = ARGV.pop
+
+# CAUTION! Kwality kode.
+#
+if manual or help
+  # Open the file, stripping the shebang line
+  lines = File.open(__FILE__){|fh| fh.readlines}[1..-1]
+
+  found_synopsis = false
+
+  lines.each do |line|
+
+    line.chomp!
+    break if line.empty?
+
+    if help and !found_synopsis
+      found_synopsis = (line =~ /^#\s+SYNOPSIS\s*$/)
+      next
+    end
+
+    puts line[2..-1].to_s
+
+    break if help and found_synopsis and line =~ /^#\s*$/
+
+  end
+end
+
+exit 0 if help or version or manual
+
+begin
+  pkg = Sautobuild.new(source_dir)
+  pkg.update_chroot = update_chroot
+  pkg.build
+  pkg.check(strict)
+
+  if label or origin or components
+    pkg.make_repo(:label => label, :origin => origin, :components => components)
+  end
+rescue StandardError => ex
+  puts ex.backtrace.join("\n") if $DEBUG
+  error(ex.to_s)
+end
+
+exit 0

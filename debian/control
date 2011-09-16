@@ -1,0 +1,15 @@
+Source: sautobuild
+Section: admin
+Priority: extra
+Maintainer: Patrick J Cherry <patrick@bytemark.co.uk>
+Build-Depends: debhelper (>= 7), txt2man, ruby, ruby1.8
+Standards-Version: 3.8.3
+
+Package: sautobuild
+Architecture: any
+Depends: sbuild, ruby, ruby1.8, dpkg-dev, ${shlibs:Depends}, ${misc:Depends}
+Suggests: ubuntu-dev-tools
+Description: This automatically builds Debian packages for all available architectures
+ This is the logical extension of sbuild, for use when building a package for
+ multiple architectures.  It also creates a basic Debian package repository,
+ for your new packages, as required.
