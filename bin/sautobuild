@@ -188,7 +188,7 @@ exit 0 if help or version or manual
 begin
   pkg = Sautobuild.new(source_dir)
   pkg.update_chroot = update_chroot
-  pkg.distribution = distribution
+  pkg.distribution = distribution if distribution
   pkg.build
   pkg.check(strict)
 
