@@ -1,3 +1,9 @@
+sautobuild (0.3) stable; urgency=low
+
+  * Now deals with multiple architectures being specified in the dsc
+
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Thu, 15 Dec 2011 10:27:35 +0000
+
 sautobuild (0.2) stable; urgency=low
 
   * Added a distribution flag to force building for a distro.

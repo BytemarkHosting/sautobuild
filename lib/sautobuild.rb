@@ -19,7 +19,7 @@ class Sautobuild
     @build_dir = File.expand_path(File.join(@source_dir, ".."))
     @update_chroot = false
     @version, @source, @distribution, @architecture = nil
-    @available_architectures = @available_distributions = []
+    @architectures = @available_architectures = @available_distributions = []
   end
 
   def changelog; File.join(@source_dir, "debian", "changelog"); end
@@ -52,23 +52,48 @@ class Sautobuild
     do_read_dsc if @architecture.nil?
     @architecture
   end
+  
+  def architecture=(a); @architecture = a; end
 
-  def architecture=(a)
-    raise ArgumentError, "Unknown distribution #{a}" unless self.available_architectures.include?(a) or %w(all any).include?(a)
-    @architecture = a
+  def architectures
+    do_read_dsc if @architecture.nil?
+    return [] if @architecture.nil?
+
+    @architectures = @architecture.split(" ") if @architectures.empty?
+    @architectures
+  end
+
+  def architectures=(archs)
+    archs.each do |a|
+      if self.available_architectures.include?(a) or %w(all any).include?(a)
+        @architectures << a
+      else
+        warn "Unknown architecture #{a}"
+      end
+    end
+
+    raise ArgumentError, "No valid/available architectures found in #{as.inspect}"
+
+    @architectures
   end
 
   def dsc; File.join(@build_dir,source+"_"+version+".dsc") ; end
 
   def build_architectures
-    case self.architecture
-    when "any"
-      self.available_architectures
-    when "all"
-      [`dpkg-architecture -qDEB_BUILD_ARCH_CPU`.chomp]
-    else
-      [self.architecture]
+    build_archs = []
+
+    self.architectures.each do |a|
+      case a
+      when "any"
+        build_archs += self.available_architectures
+      when "all"
+        build_archs << `dpkg-architecture -qDEB_BUILD_ARCH_CPU`.chomp
+      else
+        build_archs << a if self.available_architectures.include?(a)
+      end
     end
+
+    build_archs.sort.uniq
   end
 
   def available_distributions
@@ -163,9 +188,17 @@ class Sautobuild
   end
 
   def do_build_debs
+    # 
+    # Only need to build all arches once.
+    #
+    built_all = false 
+
     self.build_architectures.each do |arch|
       cmd = ["cd #{@build_dir} && sbuild --arch=#{arch} --dist=#{self.distribution}"]
-      cmd << "--arch-all" if self.architecture == "all"
+      if self.architectures.include?("all") and !built_all
+        cmd << "--arch-all" if self.architectures.include?("all")
+        built_all = true
+      end
       cmd << "--apt-update" if @update_chroot
       cmd << self.dsc
       do_or_die(cmd.join(" "))
