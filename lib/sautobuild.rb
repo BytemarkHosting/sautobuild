@@ -195,8 +195,8 @@ class Sautobuild
 
     self.build_architectures.each do |arch|
       cmd = ["cd #{@build_dir} && sbuild --arch=#{arch} --dist=#{self.distribution}"]
-      if self.architectures.include?("all") and !built_all
-        cmd << "--arch-all" if self.architectures.include?("all")
+      if !built_all
+        cmd << "--arch-all" 
         built_all = true
       end
       cmd << "--apt-update" if @update_chroot

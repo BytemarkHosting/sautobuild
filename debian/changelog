@@ -1,3 +1,10 @@
+sautobuild (0.4) stable; urgency=low
+
+  * --arch-all is always given on the first invocation of sbuild now, to make
+    sure that arch-indep packages are built every time.
+
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Tue, 17 Jan 2012 16:07:28 +0000
+
 sautobuild (0.3) stable; urgency=low
 
   * Now deals with multiple architectures being specified in the dsc
