@@ -184,7 +184,7 @@ class Sautobuild
   def do_build_source
     puts "Building source package in #{@source_dir}"
     do_or_die("cd #{@build_dir}  && dpkg-source -I -b #{@source_dir}")
-    do_or_die("cd #{@source_dir} && dpkg-genchanges -S > #{@build_dir}/#{source}_#{version}.changes")
+    do_or_die("cd #{@source_dir} && dpkg-genchanges -S > #{@build_dir}/#{source}_#{version}_source.changes")
   end
 
   def do_build_debs
