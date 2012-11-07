@@ -140,7 +140,7 @@ if [ -x "$QEMU" ] ; then
     -net nic,model=virtio -net tap \
     -pidfile $STEMPDIR/pid -monitor unix:$STEMPDIR/monitor,server,nowait \
     -kernel $STEMPDIR/vmlinuz -initrd $STEMPDIR/initrd.img \
-    -boot c -nographic -no-reboot -enable-kvm \
+    -boot c -nographic -enable-kvm \
     -append "edd=off console=tty0 console=ttyS0,11520n8 root=/dev/vda"  | tee $SLOGFILE 
 else
   echo "W: $QEMU is not executable."
