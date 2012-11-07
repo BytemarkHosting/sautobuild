@@ -85,7 +85,7 @@ trap do_tidy_up EXIT
 # Wait until nologin has been removed
 #
 while [ -e /var/lib/initscripts/nologin -o -e /etc/nologin ] ; do
-  echo "** Sleeping whilst nologin exists"
+  echo "sautotest_runner: Sleeping whilst nologin exists"
   sleep 1
 done
 
@@ -96,15 +96,15 @@ if [ -e /\$SCRIPT_DIR/DEBUG ] ; then
   exec /bin/login -f root
 fi
 
-echo "** Tests started at \$(date --rfc-2822)"
+echo "sautotest_runner: Tests started at \$(date --rfc-2822)"
 
 #
 # If run-parts exits successfully, then set our status to pass.
 #
 /bin/run-parts $VERBOSE --new-session --exit-on-error /\$SCRIPT_DIR && STATUS="PASS"
 
-echo "** Tests finshed at \$(date --rfc-2822)"
-echo "** \$STATUS"
+echo "sautotest_runner: Tests finshed at \$(date --rfc-2822)"
+echo "sautotest_runner: \$STATUS"
 
 EOF
 

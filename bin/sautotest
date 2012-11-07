@@ -152,7 +152,7 @@ if [ ! -f $SLOGFILE ] ; then
   exit 1
 fi
 
-if ! grep -q "^** PASS$" $SLOGFILE ; then
+if ! grep -q 'sautotest_runner: PASS' $SLOGFILE ; then
   echo "E: Tests failed."
   exit 1
 fi
