@@ -75,9 +75,20 @@ fi
 mkdir $VERBOSE -p $STEMPDIR
 
 #
+# Copy our schroot setup to $TEMPDIR
+#
+cp $VERBOSE $SBINDIR/sautotest_setup_schroot $STEMPDIR/
+
+#
+# Copy our tests to $TMPDIR too.
+#
+mkdir -p $VERBOSE $TEMPDIR/sautotest.d
+cp --recursive $VERBOSE $SCRIPT_DIR/* $TEMPDIR/sautotest.d
+
+#
 # Setup our schroot
 #
-$SCHROOT_BIN --chroot=$CHROOT --run-session --user=root ${0}_setup_schroot $SCRIPT_DIR
+$SCHROOT_BIN --chroot=$CHROOT --run-session --user=root $STEMPDIR/sautotest_setup_schroot $TEMPDIR/sautotest.d
 
 # 
 # Our qemu command line is going to try to use the kernel in the chroot.

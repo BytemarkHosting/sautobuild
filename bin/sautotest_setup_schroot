@@ -60,13 +60,14 @@ EOF
 #
 # Copy our test scripts into the chroot
 #
-cat > /run_tests <<EOF
+cat > /sautotest_runner <<EOF
 #!/bin/bash
 
 #
 # The output status -- default is fail.
 #
 STATUS="FAIL"
+SCRIPT_DIR="/sautotest.d"
 
 do_tidy_up() {
   #
@@ -91,7 +92,7 @@ done
 #
 # If there's a DEBUG flag, then just spawn a root login.
 #
-if [ -e /$SCRIPT_DIR/DEBUG ] ; then
+if [ -e /\$SCRIPT_DIR/DEBUG ] ; then
   exec /bin/login -f root
 fi
 
@@ -100,7 +101,7 @@ echo "** Tests started at \$(date --rfc-2822)"
 #
 # If run-parts exits successfully, then set our status to pass.
 #
-/bin/run-parts $VERBOSE --new-session --exit-on-error /$SCRIPT_DIR && STATUS="PASS"
+/bin/run-parts $VERBOSE --new-session --exit-on-error /\$SCRIPT_DIR && STATUS="PASS"
 
 echo "** Tests finshed at \$(date --rfc-2822)"
 echo "** \$STATUS"
@@ -111,20 +112,21 @@ EOF
 #
 # Copy our script directory to the 
 #
-cp $VERBOSE -r $SCRIPT_DIR /
-chmod +x /run_tests /$SCRIPT_DIR/*
+mkdir $VERBOSE /sautotest.d
+cp $VERBOSE --archive $SCRIPT_DIR/* /sautotest.d
+chmod $VERBOSE +x /sautotest_runner /sautotest.d/*
 
 if [ -e /etc/inittab ] ; then
-  sed -ie 's/^#T0.*$/T0:2:once:\/run_tests/' /etc/inittab
+  sed -ie 's/^#T0.*$/T0:2:once:\/sautotest_runner/' /etc/inittab
 elif [ -d /etc/init ] ; then
   cat > /etc/init/ttyS0.conf <<EOF
 #
 # Run our tests
 # 
-start on stopped rc RUNLEVEL=[2345]
-stop on runlevel [!2345]
+start on runlevel [2]
+stop on runlevel [!2]
 
-exec /run_tests
+exec /sautotest_runner
 EOF
 fi
 
@@ -204,8 +206,8 @@ if [ "\$IFACE" = "eth0" ] ; then
   ip=\$(ip -o -f \${ADDRFAM} addr show dev \${IFACE} scope global primary |  sed -e 's/.*inet6\\? \\([0-9a-f:\\.]\\+\\).*/\\1/')
   hostname=$hostname
 
-  echo "Adding hostname to /etc/hosts:"
   if [ "x\$ip" != "x" ] ; then
+    echo "Adding hostname to /etc/hosts:"
     echo "\$ip \$hostname \${hostname%%.*}" | tee -a /etc/hosts
   fi
 fi
@@ -214,8 +216,6 @@ EOF
 
   chmod +x /etc/network/if-up.d/00-add_hostname_to_hosts
 fi
-
-
 
 #
 # Make sure no udev rules are in place.
