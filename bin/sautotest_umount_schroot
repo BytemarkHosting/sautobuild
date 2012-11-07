@@ -1,0 +1,18 @@
+#!/bin/bash
+
+#
+# Bail out of there is an error of some sort.
+#
+set -e
+
+VERBOSE=""
+SCHROOT_MOUNT="$1"
+
+#
+# Unmount our schroot.
+#
+for m in $(/usr/lib/schroot/schroot-listmounts -m $SCHROOT_MOUNT) ; do
+  [ "$VERBOSE" = "--verbose" ] && echo "I: Unmounting $m" 
+  umount "$m"
+done
+

@@ -1,0 +1,150 @@
+#!/bin/bash
+
+#
+# Bail out of there is an error of some sort.
+#
+set -e
+
+#
+# 
+#
+VERBOSE="" #--verbose"
+SCHROOT_BIN="/usr/bin/schroot $VERBOSE"
+
+SCHROOT="$1"
+SCRIPT_DIR="$2"
+
+#
+# Our temporary directory.  This is where we'll keep the kernel + initrd.
+#
+STEMPDIR=$(mktemp -d)
+SLOGFILE=$STEMPDIR/log
+SELF=$(which $0)
+SBINDIR=$(dirname $SELF)
+
+do_tidy_up() {
+  #
+  # Reset traps
+  #
+  trap - ERR
+  trap - EXIT
+
+  if [ -f "$SLOGFILE" ] ; then
+    echo "Saving log file as sautotest.log.$$"
+    cp $VERBOSE $SLOGFILE $PWD/sautotest.log.$$ 
+  fi
+
+  if [ "x$CHROOT" != "x" ] ; then
+    $SCHROOT_BIN --force --end-session --chroot $CHROOT  
+  fi
+
+  if [ "x$STEMPDIR" != "x" -a -d "$STEMPDIR" ] ; then
+    rm -rf $VERBOSE $STEMPDIR
+  fi
+}
+
+#
+# Set traps.
+#
+trap do_tidy_up ERR
+trap do_tidy_up EXIT
+
+#
+# Create our chroot
+#
+CHROOT=$(/usr/bin/schroot --begin --chroot ${SCHROOT})
+
+#
+# Make sure our chroot is set up
+#
+if [ "x$CHROOT" = "x" ] ; then
+  echo "E: schroot failed to create chroot."
+  exit 1
+fi
+
+#
+# This is where we're expecting schroot to set things up.  Make sure it is
+# there
+#
+SCHROOT_MOUNT=/var/lib/schroot/mount/$CHROOT
+if [ ! -d $SCHROOT_MOUNT ] ; then
+  echo "E: schroot mountpount missing"
+  exit 1
+fi
+
+mkdir $VERBOSE -p $STEMPDIR
+
+#
+# Setup our schroot
+#
+$SCHROOT_BIN --chroot=$CHROOT --run-session --user=root ${0}_setup_schroot $SCRIPT_DIR
+
+# 
+# Our qemu command line is going to try to use the kernel in the chroot.
+# Failing that, maybe the host kernel will do the trick.
+#
+if [ -e $SCHROOT_MOUNT/vmlinuz -a -e $SCHROOT_MOUNT/initrd.img ] ; then
+  echo "I: using chroot machine kernel + initrd"
+  cp $VERBOSE $SCHROOT_MOUNT/vmlinuz $STEMPDIR
+  cp $VERBOSE $SCHROOT_MOUNT/initrd.img $STEMPDIR
+elif [ -e /vmlinuz -a -e /initrd.img ] ; then
+  echo "I: using host machine kernel + initrd"
+  cp $VERBOSE /vmlinuz $STEMPDIR
+  cp $VERBOSE /initrd.img $STEMPDIR
+else
+  echo "E: Could not find a suitable kernel and/or initrd to use."
+  exit 1
+fi
+
+#
+# Unmount our schroot.
+#
+sudo ${SBINDIR}/sautotest_umount_schroot $SCHROOT_MOUNT
+
+#
+# Work out where our snapshot actually is, and if we're using 32/64bit.
+#
+chroot_info=$(/usr/bin/schroot --info --chroot $CHROOT)
+personality=$(echo "$chroot_info"     | grep "^ \+Personality"         | awk '{print $2}')
+snapshot_device=$(echo "$chroot_info" | grep "^ \+LVM Snapshot Device" | awk '{print $4}')
+
+#
+# Which version of qemu should we use?
+#
+if [ "$personality" = "linux32" ] ; then
+  QEMU=/usr/bin/qemu-system-i386
+elif [ "$personality" = "linux" ] ; then
+  QEMU=/usr/bin/qemu-system-x86_64
+else
+  echo "E: Unrecognised personality '$personality'"
+  exit 1
+fi
+
+#
+# Start our VM..
+#
+if [ -x "$QEMU" ] ; then
+  sudo $QEMU -m 2048 \
+    -drive file=$snapshot_device,if=virtio,index=0 \
+    -net nic,model=virtio -net tap \
+    -pidfile $STEMPDIR/pid -monitor unix:$STEMPDIR/monitor,server,nowait \
+    -kernel $STEMPDIR/vmlinuz -initrd $STEMPDIR/initrd.img \
+    -boot c -nographic -no-reboot -enable-kvm \
+    -append "edd=off console=tty0 console=ttyS0,11520n8 root=/dev/vda"  | tee $SLOGFILE 
+else
+  echo "W: $QEMU is not executable."
+  exit 1
+fi
+
+if [ ! -f $SLOGFILE ] ; then
+  echo "E: Test log could not be found."
+  exit 1
+fi
+
+if ! grep -q "^** PASS$" $SLOGFILE ; then
+  echo "E: Tests failed."
+  exit 1
+fi
+
+echo "I: Tests passed."
+exit 0
