@@ -5,7 +5,6 @@
 #
 set -e
 
-
 show_help() {
 
   echo <<EOF
@@ -70,9 +69,18 @@ fi
 #
 SCHROOT_TEST_D="$1"
 
-
 if [ ! -d "$SCHROOT_TEST_D" ] ; then
-  echo "E: Unable to find directory '$SCHROOT_TEST_D'"
+  echo "E: Unable to find test directory '$SCHROOT_TEST_D'"
+  exit 1
+fi
+
+#
+# Check our setup directory exists
+#
+SCHROOT_SETUP_D=${SCHROOT_SETUP_D:-/usr/share/sautobuild/sautotest.setup.d/}
+
+if [ ! -d "$SCHROOT_SETUP_D" ] ; then
+  echo "E: Unable to find setup directory '$SCHROOT_SETUP_D'"
   exit 1
 fi
 
