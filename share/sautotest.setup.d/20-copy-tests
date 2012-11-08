@@ -1,0 +1,76 @@
+#!/bin/bash
+
+#
+# Bail out of there is an error of some sort.
+#
+set -e
+
+SCRIPT_DIR=$1
+
+if [ -z "$SCRIPT_DIR" ] ; then
+  echo "E: No script directory given on command line"
+  exit 1
+fi
+
+SCHROOT_SCRIPT_NAME=${SCHROOT_SCRIPT_NAME:-sautotest_runner}
+SCHROOT_SCRIPT_DIR=${SCHROOT_SCRIPT_DIR:-/sautotest.test.d}
+
+#
+# Copy our test scripts into the chroot
+#
+cat > /$SCHROOT_SCRIPT_NAME <<EOF
+#!/bin/bash
+
+#
+# The output status -- default is fail.
+#
+STATUS="FAIL"
+VERBOSE=$VERBOSE
+
+do_tidy_up() {
+  #
+  # Sync (to make sure all the output gets flushed) and
+  # halt.
+  #
+  /bin/sync
+  /sbin/halt
+}
+
+trap do_tidy_up ERR
+
+#
+# Wait until nologin has been removed
+#
+while [ -e /var/lib/initscripts/nologin -o -e /etc/nologin ] ; do
+  echo "$SCHROOT_SCRIPT_NAME: Sleeping whilst nologin exists"
+  sleep 1
+done
+
+#
+# If there's a DEBUG flag, then just spawn a root login.
+#
+if [ -e /$SCHROOT_SCRIPT_DIR/DEBUG ] ; then
+  /bin/login -f root
+  do_tidy_up
+fi
+
+echo "$SCHROOT_SCRIPT_NAME: Tests started at \$(date --rfc-2822)"
+
+#
+# If run-parts exits successfully, then set our status to pass.
+#
+/bin/run-parts $VERBOSE --new-session --exit-on-error /$SCHROOT_SCRIPT_DIR && STATUS="PASS"
+
+echo "$SCHROOT_SCRIPT_NAME: Tests finshed at \$(date --rfc-2822)"
+echo "$SCHROOT_SCRIPT_NAME: \$STATUS"
+
+do_tidy_up
+EOF
+
+#
+# Copy our script directory to the schroot.
+#
+mkdir $VERBOSE $SCHROOT_SCRIPT_DIR
+cp    $VERBOSE --archive $SCRIPT_DIR/* $SCHROOT_SCRIPT_DIR
+chmod $VERBOSE +x /$SCHROOT_SCRIPT_NAME $SCHROOT_SCRIPT_DIR/*
+

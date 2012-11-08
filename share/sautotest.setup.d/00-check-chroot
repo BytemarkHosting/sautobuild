@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#
+# Make sure we're in a chroot.
+#
+if [ ! -f /etc/debian_chroot ] ; then
+  echo "E: This doesn't look like a chroot -- $0 was about to break your system!"
+  exit 1
+fi
+

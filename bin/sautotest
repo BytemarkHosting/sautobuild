@@ -5,26 +5,24 @@
 #
 set -e
 
-#
-# 
-#
-VERBOSE="" #--verbose"
-SCHROOT_BIN="/usr/bin/schroot $VERBOSE"
 
-SCHROOT="$1"
-SCRIPT_DIR="$2"
+show_help() {
 
-#
-# Our temporary directory.  This is where we'll keep the kernel + initrd.
-#
-STEMPDIR=$(mktemp -d)
-SLOGFILE=$STEMPDIR/log
-SELF=$(which $0)
-SBINDIR=$(dirname $SELF)
+  echo <<EOF
+${0}: Automatically run tests using a VM based on an lvm-snapshot schroot.
+
+  -v, --verbose
+  -h, --help
+  -s, --setup-d <directory>
+  -c, --chroot <chroot>
+
+EOF
+  exit 0
+}
 
 do_tidy_up() {
   #
-  # Reset traps
+  # Reset trap
   #
   trap - ERR
   trap - EXIT
@@ -34,20 +32,96 @@ do_tidy_up() {
     cp $VERBOSE $SLOGFILE $PWD/sautotest.log.$$ 
   fi
 
-  if [ "x$CHROOT" != "x" ] ; then
-    $SCHROOT_BIN --force --end-session --chroot $CHROOT  
+  if [ -n "$CHROOT" ] ; then
+    /usr/bin/schroot $VERBOSE --force --end-session --chroot $CHROOT  
   fi
 
-  if [ "x$STEMPDIR" != "x" -a -d "$STEMPDIR" ] ; then
+  if [ -n "$STEMPDIR" -a -d "$STEMPDIR" ] ; then
     rm -rf $VERBOSE $STEMPDIR
   fi
 }
+
+# Note that we use `"$@"' to let each command-line parameter expand to a 
+# separate word. The quotes around `$@' are essential!
+# We need TEMP as the `eval set --' would nuke the return value of getopt.
+TEMP=$(getopt -o vhs:c: --long help,verbose,setup-d:,chroot -n "$0" -- "$@")
+
+# Note the quotes around `$TEMP': they are essential!
+eval set -- "$TEMP"
+
+while true ; do
+  case "$1" in
+    -h|--help) show_help ;;
+    -v|--verbose) VERBOSE="--verbose" ; shift ;;
+    -s|--setup-d) SCHROOT_SETUP_D=$2 ; shift ; shift ;;
+    -c|--chroot) SCHROOT=$2 ; shift ; shift ;;
+    --) shift ; break ;;
+    *) echo "Unknown option $1" ; exit 1 ;;
+  esac
+done
+
+if [ -z "$1" ] ; then
+  echo "E: Test directory argument is missing"
+  exit 1
+fi
+
+#
+# The test directory is the last arg.
+#
+SCHROOT_TEST_D="$1"
+
+
+if [ ! -d "$SCHROOT_TEST_D" ] ; then
+  echo "E: Unable to find directory '$SCHROOT_TEST_D'"
+  exit 1
+fi
+
+
+#
+# If no chroot is specified, use the default.
+#
+SCHROOT=${SCHROOT:-default}
+
+chroot_info=$(/usr/bin/schroot --info --chroot $SCHROOT)
+chroot_type=$(echo "$chroot_info"     | grep "^ \+Type"        | awk '{print $2}')
+personality=$(echo "$chroot_info"     | grep "^ \+Personality" | awk '{print $2}')
+
+#
+# Check to make sure the chroot exists, and is an LVM snapshot type.
+#
+if [ "$chroot_type" != "lvm-snapshot" ] ; then
+  echo "E: The $SCHROOT chroot is not an lvm-snapshot type"
+  exit 1
+fi
+
+#
+# Choose our version of qemu, and make sure it exists.
+#
+if [ "$personality" = "linux32" -o "$personality" = "linux"  ] ; then
+  QEMU=/usr/bin/qemu-system-x86_64
+else
+  echo "E: Unrecognised personality '$personality'"
+  exit 1
+fi
+
+if [ ! -x "$QEMU" ] ; then
+  echo "E: $QEMU is not found or not executable."
+  exit 1
+fi
+
+################### Tidy up needed after this point ################################
 
 #
 # Set traps.
 #
 trap do_tidy_up ERR
 trap do_tidy_up EXIT
+
+#
+# Our temporary directory.  This is where we'll keep the kernel + initrd.
+#
+STEMPDIR=$(mktemp -d)
+SLOGFILE=$STEMPDIR/log
 
 #
 # Create our chroot
@@ -57,7 +131,7 @@ CHROOT=$(/usr/bin/schroot --begin --chroot ${SCHROOT})
 #
 # Make sure our chroot is set up
 #
-if [ "x$CHROOT" = "x" ] ; then
+if [ -z "$CHROOT" ] ; then
   echo "E: schroot failed to create chroot."
   exit 1
 fi
@@ -75,20 +149,17 @@ fi
 mkdir $VERBOSE -p $STEMPDIR
 
 #
-# Copy our schroot setup to $STEMPDIR
-#
-cp $VERBOSE $SBINDIR/sautotest_setup_schroot $STEMPDIR/
-
-#
 # Copy our tests to $TMPDIR too.
 #
-mkdir -p $VERBOSE $STEMPDIR/sautotest.d
-cp --recursive $VERBOSE $SCRIPT_DIR/* $STEMPDIR/sautotest.d
+mkdir -p $VERBOSE $STEMPDIR/sautotest.test.d
+mkdir -p $VERBOSE $STEMPDIR/sautotest.setup.d
+cp --recursive $VERBOSE $SCHROOT_TEST_D/* $STEMPDIR/sautotest.test.d
+cp --recursive $VERBOSE $SCHROOT_SETUP_D/* $STEMPDIR/sautotest.setup.d
 
 #
 # Setup our schroot
 #
-$SCHROOT_BIN --chroot=$CHROOT --run-session --user=root $STEMPDIR/sautotest_setup_schroot $STEMPDIR/sautotest.d
+/usr/bin/schroot $VERBOSE --chroot=$CHROOT --run-session --user=root -- run-parts $VERBOSE --exit-on-error --arg=$STEMPDIR/sautotest.test.d $STEMPDIR/sautotest.setup.d
 
 # 
 # Our qemu command line is going to try to use the kernel in the chroot.
@@ -110,42 +181,24 @@ fi
 #
 # Unmount our schroot.
 #
-sudo ${SBINDIR}/sautotest_umount_schroot $SCHROOT_MOUNT
+sudo ${PREFIX}/sautotest_umount_schroot $SCHROOT_MOUNT
 
 #
 # Work out where our snapshot actually is, and if we're using 32/64bit.
 #
 chroot_info=$(/usr/bin/schroot --info --chroot $CHROOT)
-personality=$(echo "$chroot_info"     | grep "^ \+Personality"         | awk '{print $2}')
 snapshot_device=$(echo "$chroot_info" | grep "^ \+LVM Snapshot Device" | awk '{print $4}')
-
-#
-# Which version of qemu should we use?
-#
-if [ "$personality" = "linux32" ] ; then
-  QEMU=/usr/bin/qemu-system-i386
-elif [ "$personality" = "linux" ] ; then
-  QEMU=/usr/bin/qemu-system-x86_64
-else
-  echo "E: Unrecognised personality '$personality'"
-  exit 1
-fi
 
 #
 # Start our VM..
 #
-if [ -x "$QEMU" ] ; then
-  sudo $QEMU -m 2048 \
-    -drive file=$snapshot_device,if=virtio,index=0 \
-    -net nic,model=virtio -net tap \
-    -pidfile $STEMPDIR/pid -monitor unix:$STEMPDIR/monitor,server,nowait \
-    -kernel $STEMPDIR/vmlinuz -initrd $STEMPDIR/initrd.img \
-    -boot c -nographic -enable-kvm \
-    -append "edd=off console=tty0 console=ttyS0,11520n8 root=/dev/vda"  | tee $SLOGFILE 
-else
-  echo "W: $QEMU is not executable."
-  exit 1
-fi
+sudo $QEMU -m 2048 \
+  -drive file=$snapshot_device,if=virtio,index=0 \
+  -net nic,model=virtio -net tap \
+  -pidfile $STEMPDIR/pid -monitor unix:$STEMPDIR/monitor,server,nowait \
+  -kernel $STEMPDIR/vmlinuz -initrd $STEMPDIR/initrd.img \
+  -boot c -nographic -enable-kvm \
+  -append "edd=off console=tty0 console=ttyS0,11520n8 root=/dev/vda"  | tee $SLOGFILE 
 
 if [ ! -f $SLOGFILE ] ; then
   echo "E: Test log could not be found."
@@ -158,4 +211,5 @@ if ! grep -q 'sautotest_runner: PASS' $SLOGFILE ; then
 fi
 
 echo "I: Tests passed."
-exit 0
+
+do_tidy_up

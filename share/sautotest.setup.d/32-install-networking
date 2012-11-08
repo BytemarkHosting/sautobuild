@@ -1,0 +1,76 @@
+#!/bin/bash
+
+#
+# Bail out of there is an error of some sort.
+#
+set -e
+
+#
+# Set up a basic network config
+#
+if [ -d /etc/network ] ; then
+  cat > /etc/network/interfaces <<EOF
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+
+## FIXME
+## iface eth0 inet6 magic
+EOF
+else
+  echo "E: Don't know how to set up network on this system."
+  exit 1
+fi
+
+#
+# Set up a random hostname
+#
+hostname="$(tr -dc a-z0-9  < /dev/urandom| head -c 8)"
+if [ -e /etc/debian_chroot ] ; then
+  hostname="$hostname.$(< /etc/debian_chroot).test"
+else
+  hostname="$hostname.test"
+fi
+
+#
+# Set hostname and mailname.
+#
+echo $hostname | tee /etc/hostname /etc/mailname > /dev/null
+
+#
+# Install networking packages 
+#
+apt-get install --yes --force-yes -o "DPkg::Options::=--force-confnew" netbase ifupdown iproute isc-dhcp-client
+
+#
+# This little script makes sure our hostname is added to /etc/hosts.
+#
+if [ -d /etc/network/if-up.d ] ; then
+
+  cat > /etc/network/if-up.d/00-add_hostname_to_hosts <<EOF
+#!/bin/sh
+
+if [ "\$IFACE" = "eth0" ] ; then
+  ip=\$(ip -o -f \${ADDRFAM} addr show dev \${IFACE} scope global primary |  sed -e 's/.*inet6\\? \\([0-9a-f:\\.]\\+\\).*/\\1/')
+  hostname=$hostname
+
+  if [ "x\$ip" != "x" ] ; then
+    echo "Adding hostname to /etc/hosts:"
+    echo "\$ip \$hostname \${hostname%%.*}" | tee -a /etc/hosts
+  fi
+fi
+
+EOF
+
+  chmod +x /etc/network/if-up.d/00-add_hostname_to_hosts
+fi
+
+#
+# Make sure no udev rules are in place.
+#
+rm -f /etc/udev/rules.d/70-persistent-net.rules
+
+

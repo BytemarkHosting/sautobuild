@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#
+# This isn't going to be a chroot much longer
+#
+rm -f /etc/debian_chroot
+

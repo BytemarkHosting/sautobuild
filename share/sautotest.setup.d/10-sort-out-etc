@@ -1,0 +1,88 @@
+#!/bin/bash
+
+#
+# Bail out of there is an error of some sort.
+#
+set -e
+
+#
+# Set up the fstab
+#
+echo  "I: Setting up /etc/fstab"
+cat > /etc/fstab <<EOF
+proc         /proc proc     rw,nodiratime,nodev,nosuid,noexec 0 0
+/dev/vda     /     ext3     errors=remount-ro,noatime,nodiratime   0     1
+EOF
+
+
+if [ -e /proc/mounts ] ; then
+  echo  "I: Setting up /etc/mtab"
+  cat /proc/mounts > /etc/mtab
+fi 
+
+#
+# Set up a stub /etc/hosts
+#
+echo  "I: Setting up /etc/hosts"
+cat > /etc/hosts <<EOF
+127.0.0.1	localhost.localdomain	localhost
+
+# The following lines are desirable for IPv6 capable hosts
+::1     ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+ff02::3 ip6-allhosts
+EOF
+
+#
+# Sort out passwd, shadow + group
+#
+for i in passwd shadow group gshadow ; do
+  if [ -f "/etc/${i}-" ] ; then
+    echo  "I: Cleaning /etc/$i"
+    cat "/etc/${i}-" > "/etc/${i}"
+  fi
+done
+
+#
+# Set up a random hostname
+#
+hostname="$(tr -dc a-z0-9  < /dev/urandom| head -c 8)"
+if [ -e /etc/debian_chroot ] ; then
+  hostname="$hostname.$(< /etc/debian_chroot).test"
+else
+  hostname="$hostname.test"
+fi
+
+SCHROOT_HOSTNAME=${SCHROOT_HOSTNAME:-$hostname}
+
+#
+# Set hostname and mailname.
+#
+echo  "I: Setting hostname and mailname to $SCHROOT_HOSTNAME"
+echo $SCHROOT_HOSTNAME | tee /etc/hostname /etc/mailname > /dev/null
+
+if [ -e /etc/inittab ] ; then
+  echo "I: Adding job to /etc/inittab"
+  sed -ie 's/^#T0.*$/T0:2:once:\/sautotest_runner/' /etc/inittab
+
+elif [ -d /etc/init ] ; then
+  echo "I: Adding job to /etc/init/ttyS0.conf"
+  cat > /etc/init/ttyS0.conf <<EOF
+#
+# Run our tests
+# 
+start on runlevel [2]
+stop on runlevel [!2]
+
+exec /sautotest_runner
+EOF
+
+else
+
+  echo "W: Unable to determine the best way to start the tests on boot"
+  exit 1
+fi
+

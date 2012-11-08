@@ -1,0 +1,32 @@
+#!/bin/bash
+
+#
+# Install a kernel
+#
+kernel=$(apt-cache search --names-only "linux-image-(generic|amd64|686)$" | awk '{print $1}' | head -n 1)
+
+if [ -n "$kernel" ] ; then
+  #
+  # Modules for the initrd.
+  #
+  echo "I: Setting up /etc/modules"
+  cat >> /etc/modules <<EOF
+#
+# I can haz all teh virtio
+#
+virtio
+virtio_net
+virtio_blk
+virtio_pci
+virtio_console
+virtio-rng
+virtio_ring
+virtio_balloon
+EOF
+
+  echo "I: Installing $kernel"
+  apt-get install --yes --force-yes $kernel 
+else
+  echo "W: Unable to find a kernel to install."
+fi
+
