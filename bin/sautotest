@@ -117,6 +117,8 @@ if [ ! -x "$QEMU" ] ; then
   exit 1
 fi
 
+PREFIX=${PREFIX:-/usr}
+
 ################### Tidy up needed after this point ################################
 
 #
@@ -169,7 +171,9 @@ chmod $VERBOSE +x $STEMPDIR/sautotest.setup.d/*
 #
 # Setup our schroot
 #
+echo "I: Setting up the chroot"
 /usr/bin/schroot $VERBOSE --chroot=$CHROOT --run-session --user=root -- run-parts $VERBOSE --exit-on-error --arg=$STEMPDIR/sautotest.test.d $STEMPDIR/sautotest.setup.d
+echo "I: Finished setting up the chroot"
 
 # 
 # Our qemu command line is going to try to use the kernel in the chroot.
@@ -191,7 +195,8 @@ fi
 #
 # Unmount our schroot.
 #
-sudo ${PREFIX}/sautotest_umount_schroot $SCHROOT_MOUNT
+echo "I: Unmounting the chroot"
+sudo ${PREFIX}/bin/sautotest_umount_schroot $SCHROOT_MOUNT
 
 #
 # Work out where our snapshot actually is, and if we're using 32/64bit.
@@ -202,6 +207,7 @@ snapshot_device=$(echo "$chroot_info" | grep "^ \+LVM Snapshot Device" | awk '{p
 #
 # Start our VM..
 #
+echo "I: Starting the VM"
 sudo $QEMU -m 2048 \
   -drive file=$snapshot_device,if=virtio,index=0 \
   -net nic,model=virtio -net tap \
