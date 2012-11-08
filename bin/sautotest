@@ -163,6 +163,8 @@ mkdir -p $VERBOSE $STEMPDIR/sautotest.test.d
 mkdir -p $VERBOSE $STEMPDIR/sautotest.setup.d
 cp --recursive $VERBOSE $SCHROOT_TEST_D/* $STEMPDIR/sautotest.test.d
 cp --recursive $VERBOSE $SCHROOT_SETUP_D/* $STEMPDIR/sautotest.setup.d
+chmod $VERBOSE -x $STEMPDIR/sautotest.test.d/*
+chmod $VERBOSE -x $STEMPDIR/sautotest.setup.d/*
 
 #
 # Setup our schroot
