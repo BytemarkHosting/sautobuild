@@ -205,12 +205,17 @@ chroot_info=$(/usr/bin/schroot --info --chroot $CHROOT)
 snapshot_device=$(echo "$chroot_info" | grep "^ \+LVM Snapshot Device" | awk '{print $4}')
 
 #
+# Assign a random mac.  Fingers crossed.
+#
+mac_address=$(printf "ff:fe:%02x:%02x:%02x:%02x" $((RANDOM / 128)) $((RANDOM / 128)) $((RANDOM / 128)) $((RANDOM / 128))) 
+
+#
 # Start our VM..
 #
 echo "I: Starting the VM"
 sudo $QEMU -m 2048 \
   -drive file=$snapshot_device,if=virtio,index=0 \
-  -net nic,model=e1000 -net tap \
+  -net nic,model=virtio,macaddr=$mac_address -net tap \
   -pidfile $STEMPDIR/pid -monitor unix:$STEMPDIR/monitor,server,nowait \
   -kernel $STEMPDIR/vmlinuz -initrd $STEMPDIR/initrd.img \
   -boot c -nographic -enable-kvm \
