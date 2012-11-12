@@ -210,7 +210,7 @@ snapshot_device=$(echo "$chroot_info" | grep "^ \+LVM Snapshot Device" | awk '{p
 echo "I: Starting the VM"
 sudo $QEMU -m 2048 \
   -drive file=$snapshot_device,if=virtio,index=0 \
-  -net nic,model=virtio -net tap \
+  -net nic,model=e1000 -net tap \
   -pidfile $STEMPDIR/pid -monitor unix:$STEMPDIR/monitor,server,nowait \
   -kernel $STEMPDIR/vmlinuz -initrd $STEMPDIR/initrd.img \
   -boot c -nographic -enable-kvm \

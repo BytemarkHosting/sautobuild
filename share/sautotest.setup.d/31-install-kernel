@@ -11,6 +11,9 @@ if [ -n "$kernel" ] ; then
   #
   echo "I: Setting up /etc/modules"
   cat >> /etc/modules <<EOF
+
+e1000
+
 #
 # I can haz all teh virtio
 #
