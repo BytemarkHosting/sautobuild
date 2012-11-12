@@ -22,12 +22,22 @@ cat > /$SCHROOT_SCRIPT_NAME <<EOF
 #!/bin/bash
 
 #
+# Exit in case of boo-boos.
+#
+set -e
+
+#
 # The output status -- default is fail.
 #
 STATUS="FAIL"
 VERBOSE=$VERBOSE
 
 do_tidy_up() {
+  #
+  # Output the status of our tests.
+  #
+  echo "$SCHROOT_SCRIPT_NAME: \$STATUS"
+
   #
   # Sync (to make sure all the output gets flushed) and
   # halt.
@@ -50,19 +60,23 @@ done
 # If there's a DEBUG flag, then just spawn a root login.
 #
 if [ -e /$SCHROOT_SCRIPT_DIR/DEBUG ] ; then
+  STATUS="DEBUG"
   /bin/login -f root
   do_tidy_up
 fi
 
-echo "$SCHROOT_SCRIPT_NAME: Tests started at \$(date --rfc-2822)"
 
 #
 # If run-parts exits successfully, then set our status to pass.
 #
-/bin/run-parts $VERBOSE --new-session --exit-on-error /$SCHROOT_SCRIPT_DIR && STATUS="PASS"
-
+echo "$SCHROOT_SCRIPT_NAME: Tests started at \$(date --rfc-2822)"
+/bin/run-parts $VERBOSE --new-session --exit-on-error /$SCHROOT_SCRIPT_DIR 
 echo "$SCHROOT_SCRIPT_NAME: Tests finshed at \$(date --rfc-2822)"
-echo "$SCHROOT_SCRIPT_NAME: \$STATUS"
+
+#
+# If we've got this far, it is a pass!
+#
+STATUS="PASS"
 
 do_tidy_up
 EOF
@@ -72,5 +86,5 @@ EOF
 #
 mkdir $VERBOSE $SCHROOT_SCRIPT_DIR
 cp    $VERBOSE --archive $SCRIPT_DIR/* $SCHROOT_SCRIPT_DIR
-chmod $VERBOSE +x /$SCHROOT_SCRIPT_NAME $SCHROOT_SCRIPT_DIR/*
+chmod $VERBOSE +x /$SCHROOT_SCRIPT_NAME
 
