@@ -5,13 +5,23 @@
 #
 set -e
 
-VERBOSE=""
 SCHROOT_MOUNT="$1"
+
+#
+# Pick the first listmounts command that comes to hand.
+#
+for c in /usr/lib/*/schroot/schroot-listmounts ; do
+  if [ -x $c ] ; then
+    UMOUNT_LIST=$c
+    break
+  fi
+done
 
 #
 # Unmount our schroot.
 #
-for m in $(/usr/lib/schroot/schroot-listmounts -m $SCHROOT_MOUNT) ; do
+echo "I: Unmounting $SCHROOT_MOUNT"
+for m in $($UMOUNT_LIST -m $SCHROOT_MOUNT) ; do
   [ "$VERBOSE" = "--verbose" ] && echo "I: Unmounting $m" 
   umount "$m"
 done
