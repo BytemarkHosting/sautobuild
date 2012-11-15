@@ -144,13 +144,20 @@ CHROOT=$(/usr/bin/schroot --begin --chroot ${SCHROOT})
 if [ -z "$CHROOT" ] ; then
   echo "E: schroot failed to create chroot."
   exit 1
+else
+  CHROOT="session:$CHROOT"
 fi
+
+#
+# Work out where our snapshot actually is, and if we're using 32/64bit.
+#
+chroot_info=$(/usr/bin/schroot --info --chroot $CHROOT)
 
 #
 # This is where we're expecting schroot to set things up.  Make sure it is
 # there
 #
-SCHROOT_MOUNT=/var/lib/schroot/mount/$CHROOT
+SCHROOT_MOUNT=$(echo "$chroot_info" | grep "^ \+Mount Location" | awk '{print $3}')
 if [ ! -d $SCHROOT_MOUNT ] ; then
   echo "E: schroot mountpount missing"
   exit 1
@@ -192,17 +199,13 @@ else
   exit 1
 fi
 
+snapshot_device=$(echo "$chroot_info" | grep "^ \+LVM Snapshot Device" | awk '{print $4}')
+
 #
 # Unmount our schroot.
 #
 echo "I: Unmounting the chroot"
 sudo ${PREFIX}/bin/sautotest_umount_schroot $SCHROOT_MOUNT
-
-#
-# Work out where our snapshot actually is, and if we're using 32/64bit.
-#
-chroot_info=$(/usr/bin/schroot --info --chroot $CHROOT)
-snapshot_device=$(echo "$chroot_info" | grep "^ \+LVM Snapshot Device" | awk '{print $4}')
 
 #
 # Assign a random mac.  Fingers crossed.
