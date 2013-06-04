@@ -28,7 +28,7 @@ virtio_balloon
 EOF
 
   echo "I: Installing $kernel"
-  apt-get install --yes --force-yes $kernel 
+  apt-get install --no-install-recommends --yes --force-yes $kernel 
 else
   echo "W: Unable to find a kernel to install."
 fi
