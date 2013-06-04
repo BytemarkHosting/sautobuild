@@ -210,7 +210,7 @@ sudo ${PREFIX}/bin/sautotest_umount_schroot $SCHROOT_MOUNT
 #
 # Assign a random mac.  Fingers crossed.
 #
-mac_address=$(printf "ff:fe:%02x:%02x:%02x:%02x" $((RANDOM / 128)) $((RANDOM / 128)) $((RANDOM / 128)) $((RANDOM / 128))) 
+mac_address=$(printf "52:54:%02x:%02x:%02x:%02x" $((RANDOM / 128)) $((RANDOM / 128)) $((RANDOM / 128)) $((RANDOM / 128)) )
 
 #
 # Start our VM..
@@ -218,7 +218,7 @@ mac_address=$(printf "ff:fe:%02x:%02x:%02x:%02x" $((RANDOM / 128)) $((RANDOM / 1
 echo "I: Starting the VM"
 sudo $QEMU -m 2048 \
   -drive file=$snapshot_device,if=virtio,index=0 \
-  -net nic,model=virtio,macaddr=$mac_address -net tap \
+  -net nic,model=e1000,macaddr=$mac_address -net tap \
   -pidfile $STEMPDIR/pid -monitor unix:$STEMPDIR/monitor,server,nowait \
   -kernel $STEMPDIR/vmlinuz -initrd $STEMPDIR/initrd.img \
   -boot c -nographic -enable-kvm \

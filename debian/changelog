@@ -1,3 +1,9 @@
+sautobuild (0.6) testing; urgency=low
+
+  * Updated to work with schroot/sbuild in testing.
+
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Thu, 15 Nov 2012 17:27:40 +0000
+
 sautobuild (0.5) stable; urgency=low
 
   * Added new sautotest functionality.
