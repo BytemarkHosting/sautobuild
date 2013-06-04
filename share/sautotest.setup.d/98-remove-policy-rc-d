@@ -1,0 +1,6 @@
+#!/bin/sh
+
+if [ -e /usr/sbin/policy-rc.d ] ; then 
+  echo "Removing /usr/sbin/policy-rc.d"
+  /bin/rm /usr/sbin/policy-rc.d
+fi
