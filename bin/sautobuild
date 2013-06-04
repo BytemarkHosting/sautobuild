@@ -6,7 +6,7 @@
 # SYNOPSIS
 #   sautobuild [ --help | -h ] [ --manual | -m ] [ --distribution | -d <dist> ]
 #              [ --strict | -s ] [ --update | -u ] [ --origin | -O <origin> ]
-#              [ --label | -L <label> ] [ -n | --no-repo ]
+#              [ --label | -L <label> ] [ -n | --no-repo ] [ -c | --check ]
 #              [ --components | -C <components> ] <source directory>
 #
 # OPTIONS
@@ -17,6 +17,8 @@
 #
 # --distribution, -d <distro>  Specify the distribution rather than reading it
 #                              from debian/changelog
+#
+# --check, -c            Check packages using Lintian.
 #
 # --strict, -s           Enable strict Lintian checking of produced packages.
 #                        Causes the build process to exit with the Lintian exit
@@ -110,7 +112,7 @@ def error(msg)
   exit 1
 end
 
-no_repo = help = manual = verbose = version = strict = update_chroot = do_make_repo = false
+check = no_repo = help = manual = verbose = version = strict = update_chroot = do_make_repo = false
 
 components = "main"
 #
@@ -124,6 +126,7 @@ opts = GetoptLong.new(
   ['-h', '--help',    GetoptLong::NO_ARGUMENT],
   ['-m', '--manual', GetoptLong::NO_ARGUMENT],
   ['-s', '--strict', GetoptLong::NO_ARGUMENT],
+  ['-c', '--check', GetoptLong::NO_ARGUMENT],
   ['-u', '--update', GetoptLong::NO_ARGUMENT],
   ['-n', '--no-repo', GetoptLong::NO_ARGUMENT],
   ['-d', '--distribution', GetoptLong::OPTIONAL_ARGUMENT],
@@ -141,6 +144,8 @@ case opt
     verbose = true
   when "-s"
     strict = true
+  when "-c"
+    check = true
   when "-d"
     distribution = arg
   when "-u"
@@ -190,7 +195,7 @@ begin
   pkg.update_chroot = update_chroot
   pkg.distribution = distribution if distribution
   pkg.build
-  pkg.check(strict)
+  pkg.check(strict) if check 
 
   unless no_repo
     pkg.make_repo(:label => label, :origin => origin, :components => components)
