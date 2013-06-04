@@ -15,10 +15,13 @@ auto lo
 iface lo inet loopback
 
 auto eth0
-iface eth0 inet dhcp
+iface eth0 inet dhcp 
+  post-up echo 1 > /proc/sys/net/ipv6/conf/eth0/autoconf
+  post-up echo 1 > /proc/sys/net/ipv6/conf/eth0/accept_ra
 
-## FIXME
-## iface eth0 inet6 magic
+#
+# IPv6 can work by SLAAC.
+#
 EOF
 else
   echo "E: Don't know how to set up network on this system."
@@ -66,6 +69,7 @@ fi
 EOF
 
   chmod +x /etc/network/if-up.d/00-add_hostname_to_hosts
+
 fi
 
 #
