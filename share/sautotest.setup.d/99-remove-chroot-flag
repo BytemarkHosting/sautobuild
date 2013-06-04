@@ -3,5 +3,7 @@
 #
 # This isn't going to be a chroot much longer
 #
-rm -f /etc/debian_chroot
+if [ -f /etc/debian_chroot ] ; then
+  rm $VERBOSE /etc/debian_chroot
+fi
 
