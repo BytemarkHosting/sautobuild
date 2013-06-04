@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#
+# Bail out of there is an error of some sort.
+#
+set -e
+
+if [ -n "$HTTP_PROXY"  ] ; then
+  echo "Adding apt proxy..."
+  echo  "Acquire { HTTP { Proxy \"$HTTP_PROXY\"; }; };" | tee /etc/apt/apt.conf.d/99mk-sbuild-proxy
+
+  echo "Adding http proxy to environment..."
+  echo "export http_proxy=$HTTP_PROXY" > /etc/profile.d/proxy
+  echo "export HTTP_PROXY=$HTTP_PROXY" >> /etc/profile.d/proxy
+  chmod +x /etc/profile.d/proxy
+fi
+
