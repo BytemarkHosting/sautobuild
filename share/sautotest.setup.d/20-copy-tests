@@ -18,8 +18,10 @@ SCHROOT_SCRIPT_DIR=${SCHROOT_SCRIPT_DIR:-/sautotest.test.d}
 #
 # Copy our test scripts into the chroot
 #
+# FIXME: This is UGLY.
+#
 cat > /$SCHROOT_SCRIPT_NAME <<EOF
-#!/bin/bash
+#!/bin/bash 
 
 #
 # Exit in case of boo-boos.
@@ -51,9 +53,10 @@ trap do_tidy_up ERR
 #
 # Wait until nologin has been removed
 #
-while [ -e /var/lib/initscripts/nologin -o -e /etc/nologin ] ; do
+for i in {0..5} ; do
+  [ -e /var/lib/initscripts/nologin -o -e /etc/nologin ] || break
   echo "$SCHROOT_SCRIPT_NAME: Sleeping whilst nologin exists"
-  sleep 1
+  sleep 5
 done
 
 #
@@ -65,6 +68,12 @@ if [ -e /$SCHROOT_SCRIPT_DIR/DEBUG ] ; then
   do_tidy_up
 fi
 
+#
+# Make sure the proxy environment variables are set.
+#
+if [ -e /etc/profile.d/proxy ] ; then
+  source /etc/profile.d/proxy
+fi
 
 #
 # If run-parts exits successfully, then set our status to pass.
@@ -72,6 +81,16 @@ fi
 echo "$SCHROOT_SCRIPT_NAME: Tests started at \$(date --rfc-2822)"
 /bin/run-parts $VERBOSE --new-session --exit-on-error /$SCHROOT_SCRIPT_DIR 
 echo "$SCHROOT_SCRIPT_NAME: Tests finshed at \$(date --rfc-2822)"
+
+
+#
+# Execute external tests
+#
+if [ -n "$EXTERNAL_D" ] ; then
+  echo "$SCHROOT_SCRIPT_NAME: External tests started at \$(date --rfc-2822)"
+  ssh $LOGNAME@192.168.0.1 /bin/run-parts $VERBOSE --new-session --arg $(< /etc/hostname) --exit-on-error $EXTERNAL_D 
+  echo "$SCHROOT_SCRIPT_NAME: External tests finshed at \$(date --rfc-2822)"
+fi
 
 #
 # If we've got this far, it is a pass!
