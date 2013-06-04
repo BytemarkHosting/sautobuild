@@ -14,6 +14,8 @@ ${0}: Automatically run tests using a VM based on an lvm-snapshot schroot.
   -h, --help
   -s, --setup-d <directory>
   -c, --chroot <chroot>
+  -e, --external-d <directory>
+  -p, --proxy <http_proxy>
 
 EOF
   exit 0
@@ -43,7 +45,7 @@ do_tidy_up() {
 # Note that we use `"$@"' to let each command-line parameter expand to a 
 # separate word. The quotes around `$@' are essential!
 # We need TEMP as the `eval set --' would nuke the return value of getopt.
-TEMP=$(getopt -o vhs:c: --long help,verbose,setup-d:,chroot -n "$0" -- "$@")
+TEMP=$(getopt -o hc:e:p:s:v --long help,chroot,external-d:,proxy:,setup-d:,verbose -n "$0" -- "$@")
 
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
@@ -54,6 +56,8 @@ while true ; do
     -v|--verbose) VERBOSE="--verbose" ; shift ;;
     -s|--setup-d) SCHROOT_SETUP_D=$2 ; shift ; shift ;;
     -c|--chroot) SCHROOT=$2 ; shift ; shift ;;
+    -e|--external-d) EXTERNAL_D=$2 ; shift ; shift ;;
+    -p|--proxy) HTTP_PROXY=$2 ; shift ; shift ;;
     --) shift ; break ;;
     *) echo "Unknown option $1" ; exit 1 ;;
   esac
@@ -75,6 +79,21 @@ if [ ! -d "$SCHROOT_TEST_D" ] ; then
 fi
 
 #
+# External test dir
+#
+if [ -n "$EXTERNAL_D" ] && [ ! -d "$EXTERNAL_D" ] ; then
+  echo "E: Unable to find external test directory '$EXTERNAL_D'"
+  exit 1
+fi
+
+#
+# Export our HTTP proxy var.
+#
+if [ -n "$HTTP_PROXY" ] ; then
+  export HTTP_PROXY
+fi
+
+#
 # Check our setup directory exists
 #
 SCHROOT_SETUP_D=${SCHROOT_SETUP_D:-/usr/share/sautobuild/sautotest.setup.d/}
@@ -83,7 +102,6 @@ if [ ! -d "$SCHROOT_SETUP_D" ] ; then
   echo "E: Unable to find setup directory '$SCHROOT_SETUP_D'"
   exit 1
 fi
-
 
 #
 # If no chroot is specified, use the default.
@@ -136,7 +154,7 @@ SLOGFILE=$STEMPDIR/log
 #
 # Create our chroot
 #
-CHROOT=$(/usr/bin/schroot --begin --chroot ${SCHROOT})
+CHROOT=$(/usr/bin/schroot $VERBOSE --begin --chroot ${SCHROOT})
 
 #
 # Make sure our chroot is set up
@@ -176,10 +194,17 @@ chmod $VERBOSE +x $STEMPDIR/sautotest.test.d/*
 chmod $VERBOSE +x $STEMPDIR/sautotest.setup.d/*
 
 #
+# If there is an external test.d copy that in place too.
+#
+if [ -n "$EXTERNAL_D" ] ; then
+  export EXTERNAL_D
+fi
+
+#
 # Setup our schroot
 #
 echo "I: Setting up the chroot"
-/usr/bin/schroot $VERBOSE --chroot=$CHROOT --run-session --user=root -- run-parts $VERBOSE --exit-on-error --arg=$STEMPDIR/sautotest.test.d $STEMPDIR/sautotest.setup.d
+/usr/bin/schroot $VERBOSE --chroot=$CHROOT --run-session --preserve-environment --user=root -- run-parts $VERBOSE --exit-on-error --arg=$STEMPDIR/sautotest.test.d $STEMPDIR/sautotest.setup.d
 echo "I: Finished setting up the chroot"
 
 # 
@@ -208,9 +233,13 @@ echo "I: Unmounting the chroot"
 sudo ${PREFIX}/bin/sautotest_umount_schroot $SCHROOT_MOUNT
 
 #
-# Assign a random mac.  Fingers crossed.
+# Assign a random mac.  Fingers crossed.  We start with our mac address array, and use that to build 
 #
-mac_address=$(printf "52:54:%02x:%02x:%02x:%02x" $((RANDOM / 128)) $((RANDOM / 128)) $((RANDOM / 128)) $((RANDOM / 128)) )
+maa=(00 00 $((RANDOM / 128)) $((RANDOM / 128)) $((RANDOM / 128)) $((RANDOM / 128)))
+mac_address=$(printf "%02x:%02x:%02x:%02x:%02x:%02x" ${maa[*]})
+eui64=$(printf "%02x%02x:%02x%02x:%02x%02x:%02x%02x" $((${maa[0]} | 0x2)) ${maa[1]} ${maa[2]} 0xff 0xfe ${maa[3]} ${maa[4]} ${maa[5]})
+
+echo "I: QEMU monitor listening on port $monitor_port"
 
 #
 # Start our VM..
