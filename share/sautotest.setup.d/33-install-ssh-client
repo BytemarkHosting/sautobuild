@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -e
+
+if [ -n "$EXTERNAL_D" ] ; then
+  #
+  # Install ssh-client 
+  #
+  echo "I: Installing openssh-client" 
+  apt-get install --no-install-recommends --yes --force-yes openssh-client
+
+
+  #
+  # Copy our ssh private key to the chroot.
+  #
+  mkdir $VERBOSE -p -m 700 /root/.ssh/
+  cp    $VERBOSE $HOME/.ssh/id_rsa /root/.ssh
+  /usr/bin/ssh-keyscan 192.168.0.1 > /root/.ssh/known_hosts
+  chmod $VERBOSE -R go-rw /root/.ssh
+fi
+
