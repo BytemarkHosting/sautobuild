@@ -1,3 +1,10 @@
+sautobuild (0.7) stable; urgency=low
+
+  * Added external testing via SSH.
+  * More robust handling of proxies.
+
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Tue, 04 Jun 2013 12:10:54 +0100
+
 sautobuild (0.6) testing; urgency=low
 
   * Updated to work with schroot/sbuild in testing.
