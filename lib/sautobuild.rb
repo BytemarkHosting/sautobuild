@@ -215,7 +215,7 @@ class Sautobuild
     built_all = false 
 
     self.build_architectures.each do |arch|
-      cmd = ["cd #{@build_dir} && sbuild --arch=#{arch} --dist=#{self.distribution}"]
+      cmd = ["cd #{@build_dir} && sbuild --arch=#{arch} --verbose --dist=#{self.distribution}"]
       if !built_all
         cmd << "--arch-all" 
         built_all = true
