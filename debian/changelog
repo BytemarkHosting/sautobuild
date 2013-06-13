@@ -1,3 +1,11 @@
+sautobuild (0.8) stable; urgency=low
+
+  * Added apt-config and source-list flags
+  * Added verbose flag to sbuild to log to stdout as well as to a file.
+  * Now works with ruby1.9
+
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Thu, 13 Jun 2013 14:09:48 +0100
+
 sautobuild (0.7) stable; urgency=low
 
   * Added external testing via SSH.
