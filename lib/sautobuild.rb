@@ -137,7 +137,13 @@ class Sautobuild
       next unless l.chomp =~ /([^:]+): (.+)/
       field = $1.downcase
       value = $2
-      next unless self.instance_variables.include?("@"+field) and self.instance_variable_get("@"+field).nil?
+      #
+      # Deal with 1.8 and 1.9 instance variables
+      #
+      ivar = "@#{field}"
+      ivar = ivar.to_sym unless /^1\.8/ =~ RUBY_VERSION
+
+      next unless self.instance_variables.include?(ivar) and self.instance_variable_get(ivar).nil?
       next unless self.respond_to?(field+"=")
       self.__send__(field+"=",value)
     end
