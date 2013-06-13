@@ -1,4 +1,4 @@
-#!/usr/bin/ruby1.8
+#!/usr/bin/ruby
 #
 # NAME
 #   sautobuild -- automatically build a multi-arch Debian repository using sbuild
@@ -37,6 +37,14 @@
 #
 # --components, -C <components>  Sets the Components: field in the Release
 #                                file. Defaults to "main".
+#
+# --sources-list, -S <filename>  Additional apt sources list to copy into the
+#                                build chroot.  Runs apt-get update having
+#                                copied the file in place.
+#
+# --apt-config, -A <filename>  Additional apt configuration to copy into the
+#                              build chroot.  Runs apt-get update having copied
+#                              the file in place.
 #
 # USAGE
 #
@@ -121,6 +129,8 @@ components = "main"
 origin = Socket.gethostname
 label = "Unknown"
 distribution = nil
+sources_list = nil
+apt_conf = nil
 
 opts = GetoptLong.new(
   ['-h', '--help',    GetoptLong::NO_ARGUMENT],
@@ -132,7 +142,9 @@ opts = GetoptLong.new(
   ['-d', '--distribution', GetoptLong::OPTIONAL_ARGUMENT],
   ['-O', '--origin', GetoptLong::OPTIONAL_ARGUMENT],
   ['-L', '--label', GetoptLong::OPTIONAL_ARGUMENT],
-  ['-C', '--components', GetoptLong::OPTIONAL_ARGUMENT]
+  ['-C', '--components', GetoptLong::OPTIONAL_ARGUMENT],
+  ['-S', '--sources-list', GetoptLong::OPTIONAL_ARGUMENT],
+  ['-A', '--apt-config', GetoptLong::OPTIONAL_ARGUMENT]
 ).each do |opt,arg|
 
 case opt
@@ -158,6 +170,10 @@ case opt
     label = arg
   when "-C"
     components = arg
+  when "-S"
+    sources_list = arg
+  when "-A"
+    apt_conf = arg
   end
 end
 
@@ -194,6 +210,8 @@ begin
   pkg = Sautobuild.new(source_dir)
   pkg.update_chroot = update_chroot
   pkg.distribution = distribution if distribution
+  pkg.sources_list = sources_list if sources_list
+  pkg.apt_conf = apt_conf if apt_conf
   pkg.build
   pkg.check(strict) if check 
 

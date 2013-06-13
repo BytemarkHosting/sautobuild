@@ -8,7 +8,7 @@ require 'zlib'
 
 class Sautobuild
 
-  attr_reader :build_dir, :source_dir
+  attr_reader :build_dir, :source_dir, :sources_list, :apt_conf
   attr_writer :source, :update_chroot
 
   def initialize(dir)
@@ -20,6 +20,7 @@ class Sautobuild
     @update_chroot = false
     @version, @source, @distribution, @architecture = nil
     @architectures = @available_architectures = @available_distributions = []
+    @sources_list = @apt_conf = nil
   end
 
   def changelog; File.join(@source_dir, "debian", "changelog"); end
@@ -75,6 +76,20 @@ class Sautobuild
     raise ArgumentError, "No valid/available architectures found in #{as.inspect}"
 
     @architectures
+  end
+
+  def sources_list=(f)
+    f = File.expand_path(f)
+    raise Errno::ENOENT, f unless File.exists?(f)
+    @update_chroot = false
+    @sources_list = f
+  end
+
+  def apt_conf=(f)
+    f = File.expand_path(f)
+    raise Errno::ENOENT, f unless File.exists?(f)
+    @update_chroot = false
+    @apt_conf = f
   end
 
   def dsc; File.join(@build_dir,source+"_"+version+".dsc") ; end
@@ -205,7 +220,26 @@ class Sautobuild
         cmd << "--arch-all" 
         built_all = true
       end
-      cmd << "--apt-update" if @update_chroot
+
+
+      if self.apt_conf or self.sources_list
+        cmd << "--no-apt-update"
+        cmd << "--no-apt-upgrade" if @update_chroot
+
+        if self.apt_conf
+          cmd << "--chroot-setup-commands='sudo cp #{self.apt_conf} /etc/apt/apt.conf.d/'"
+        end
+
+        if self.sources_list
+          cmd << "--chroot-setup-commands='sudo cp #{self.sources_list} /etc/apt/sources.list.d/'" 
+        end
+
+        cmd << "--chroot-setup-commands='sudo apt-get update'"
+        cmd << "--chroot-setup-commands='sudo apt-get upgrade'" if @update_chroot
+      elsif @update_chroot
+        cmd << "--apt-upgrade"
+      end
+
       cmd << self.dsc
       do_or_die(cmd.join(" "))
     end
