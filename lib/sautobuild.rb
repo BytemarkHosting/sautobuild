@@ -60,7 +60,7 @@ class Sautobuild
     do_read_dsc if @architecture.nil?
     return [] if @architecture.nil?
 
-    @architectures = @architecture.split(" ") if @architectures.empty?
+    self.architectures = @architecture.split(" ") if @architectures.empty?
     @architectures
   end
 

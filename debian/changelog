@@ -1,3 +1,9 @@
+sautobuild (0.9) stable; urgency=low
+
+  * Added architecture option to sautobuild.
+
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Thu, 01 Aug 2013 12:53:37 +0100
+
 sautobuild (0.8) stable; urgency=low
 
   * Added apt-config and source-list flags

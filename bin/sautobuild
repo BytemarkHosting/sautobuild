@@ -15,6 +15,11 @@
 #
 # --manual, -m           Show this manual
 #
+# --architecture, -a <arch>    Specify the architecture to build from, rather
+#                              than reading it from debian/control. It can be a
+#                              platform name, like "amd64" or "i386", or one of
+#                              "any" or "all".
+#
 # --distribution, -d <distro>  Specify the distribution rather than reading it
 #                              from debian/changelog
 #
@@ -139,6 +144,7 @@ opts = GetoptLong.new(
   ['-c', '--check', GetoptLong::NO_ARGUMENT],
   ['-u', '--update', GetoptLong::NO_ARGUMENT],
   ['-n', '--no-repo', GetoptLong::NO_ARGUMENT],
+  ['-a', '--architecture', GetoptLong::OPTIONAL_ARGUMENT],
   ['-d', '--distribution', GetoptLong::OPTIONAL_ARGUMENT],
   ['-O', '--origin', GetoptLong::OPTIONAL_ARGUMENT],
   ['-L', '--label', GetoptLong::OPTIONAL_ARGUMENT],
@@ -158,6 +164,8 @@ case opt
     strict = true
   when "-c"
     check = true
+  when "-a"
+    archtecture = arg
   when "-d"
     distribution = arg
   when "-u"
@@ -209,6 +217,7 @@ exit 0 if help or version or manual
 begin
   pkg = Sautobuild.new(source_dir)
   pkg.update_chroot = update_chroot
+  pkg.architecture = architecture if architecture
   pkg.distribution = distribution if distribution
   pkg.sources_list = sources_list if sources_list
   pkg.apt_conf = apt_conf if apt_conf
