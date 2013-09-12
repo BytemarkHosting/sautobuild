@@ -153,35 +153,35 @@ opts = GetoptLong.new(
   ['-A', '--apt-config', GetoptLong::OPTIONAL_ARGUMENT]
 ).each do |opt,arg|
 
-case opt
-  when  "-h"
-    help = true
-  when "-m"
-    manual = true
-  when "-v"
-    verbose = true
-  when "-s"
-    strict = true
-  when "-c"
-    check = true
-  when "-a"
-    archtecture = arg
-  when "-d"
-    distribution = arg
-  when "-u"
-    update_chroot = true
-  when "-n"
-    no_repo = true
-  when "-O"
-    origin = arg
-  when "-L"
-    label = arg
-  when "-C"
-    components = arg
-  when "-S"
-    sources_list = arg
-  when "-A"
-    apt_conf = arg
+  case opt
+    when  "-h"
+      help = true
+    when "-m"
+      manual = true
+    when "-v"
+      verbose = true
+    when "-s"
+      strict = true
+    when "-c"
+      check = true
+    when "-a"
+      archtecture = arg
+    when "-d"
+      distribution = arg
+    when "-u"
+      update_chroot = true
+    when "-n"
+      no_repo = true
+    when "-O"
+      origin = arg
+    when "-L"
+      label = arg
+    when "-C"
+      components = arg
+    when "-S"
+      sources_list = arg
+    when "-A"
+     apt_conf = arg
   end
 end
 
