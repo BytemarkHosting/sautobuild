@@ -1,3 +1,10 @@
+sautobuild (0.10) stable; urgency=low
+
+  * Fixed broken architecture option
+  * Now builds only for architectures availible for a particular distro.
+
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Thu, 12 Sep 2013 10:44:18 +0100
+
 sautobuild (0.9) stable; urgency=low
 
   * Added architecture option to sautobuild.
