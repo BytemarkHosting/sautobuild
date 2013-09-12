@@ -20,6 +20,7 @@ class Sautobuild
     @update_chroot = false
     @version, @source, @distribution, @architecture = nil
     @architectures = @available_architectures = @available_distributions = []
+    @available_architectures_by_distribution = Hash.new{|h,k| h[k] = []}
     @sources_list = @apt_conf = nil
   end
 
@@ -100,11 +101,11 @@ class Sautobuild
     self.architectures.each do |a|
       case a
       when "any"
-        build_archs += self.available_architectures
+        build_archs += self.available_architectures_by_distribution[self.distribution]
       when "all"
-        build_archs << `dpkg-architecture -qDEB_BUILD_ARCH_CPU`.chomp
+        build_archs << self.available_architectures_by_distribution[self.distribution].first
       else
-        build_archs << a if self.available_architectures.include?(a)
+        build_archs << a if self.available_architectures_by_distribution[self.distribution].include?(a)
       end
     end
 
@@ -119,6 +120,11 @@ class Sautobuild
   def available_architectures
     do_find_distributions_and_architectures if @available_architectures.empty?
     @available_architectures 
+  end
+
+  def available_architectures_by_distribution
+    do_find_distributions_and_architectures if @available_architectures_by_distribution.keys.empty?
+    @available_architectures_by_distribution
   end
 
   def build
@@ -194,6 +200,7 @@ class Sautobuild
         next unless l =~ /^(?:(?:chroot|source):)?([^-]+)-(.*)$/
         dist, arch = [$1, $2]
         next unless valid_architectures.include?(arch)
+        @available_architectures_by_distribution[dist] << arch unless @available_architectures_by_distribution[dist].include?(arch)
         dists << dist unless dists.include?(dist)
         archs << arch unless archs.include?(arch)
       end
