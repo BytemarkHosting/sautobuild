@@ -74,7 +74,7 @@ class Sautobuild
       end
     end
 
-    raise ArgumentError, "No valid/available architectures found in #{as.inspect}"
+    raise ArgumentError, "No valid/available architectures found in #{archs.inspect}" if @architectures.empty?
 
     @architectures
   end
