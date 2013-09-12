@@ -133,6 +133,7 @@ components = "main"
 #
 origin = Socket.gethostname
 label = "Unknown"
+architecture = nil
 distribution = nil
 sources_list = nil
 apt_conf = nil
@@ -230,6 +231,7 @@ begin
 rescue StandardError => ex
   puts ex.backtrace.join("\n") if $DEBUG
   error(ex.to_s)
+  exit 1
 end
 
 exit 0
