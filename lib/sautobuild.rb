@@ -12,6 +12,7 @@ class Sautobuild
   attr_writer :source, :update_chroot
 
   def initialize(dir)
+    raise "No build directory specified" if dir.to_s.empty?
     raise Errno::ENOENT, dir unless File.exists?(dir)
     raise Errno::ENOTDIR, dir unless File.directory?(dir)
 
@@ -21,7 +22,7 @@ class Sautobuild
     @version, @source, @distribution, @architecture = nil
     @architectures = @available_architectures = @available_distributions = []
     @available_architectures_by_distribution = Hash.new{|h,k| h[k] = []}
-    @sources_list = @apt_conf = nil
+    @sources_list = @apt_conf = @apt_key = nil
   end
 
   def changelog; File.join(@source_dir, "debian", "changelog"); end
@@ -91,6 +92,13 @@ class Sautobuild
     raise Errno::ENOENT, f unless File.exists?(f)
     @update_chroot = false
     @apt_conf = f
+  end
+
+  def apt_key=(f)
+    f = File.expand_path(f)
+    raise Errno::ENOENT, f unless File.exists?(f)
+    @update_chroot = false
+    @apt_key = f
   end
 
   def dsc; File.join(@build_dir,source+"_"+version+".dsc") ; end
