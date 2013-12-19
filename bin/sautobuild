@@ -5,8 +5,9 @@
 #
 # SYNOPSIS
 #   sautobuild [ --help | -h ] [ --manual | -m ] [ --distribution | -d <dist> ]
-#              [ --strict | -s ] [ --update | -u ] [ --origin | -O <origin> ]
-#              [ --label | -L <label> ] [ -n | --no-repo ] [ -c | --check ]
+#              [ --chroot | -c <chroot> ] [ --strict | -s ] [ --update | -u ]
+#              [ --origin | -O <origin> ] [ --label | -L <label> ]
+#              [ -n | --no-repo ] [ -k | --check ] 
 #              [ --components | -C <components> ] <source directory>
 #
 # OPTIONS
@@ -23,7 +24,7 @@
 # --distribution, -d <distro>  Specify the distribution rather than reading it
 #                              from debian/changelog
 #
-# --check, -c            Check packages using Lintian.
+# --check, -k            Check packages using Lintian.
 #
 # --strict, -s           Enable strict Lintian checking of produced packages.
 #                        Causes the build process to exit with the Lintian exit
@@ -33,22 +34,26 @@
 #                        apt-get update to be run in the chroot before the
 #                        build starts.
 #
+# --chroot, -c           Specify which chroot you wish the package to be built
+#                        in. This overrides the assumed defaults in sbuild.
+# 
+#
 # --origin, -O <origin>  Sets the Origin: field in the Release file of
 #                        the final repository. Defaults to the build machine's
 #                        hostname.
 # 
-# --label, -L <label>    Sets the Label: field in the Release file.  Defaults
+# --label, -L <label>    Sets the Label: field in the Release file. Defaults
 #                        to "Unknown".
 #
 # --components, -C <components>  Sets the Components: field in the Release
 #                                file. Defaults to "main".
 #
 # --sources-list, -S <filename>  Additional apt sources list to copy into the
-#                                build chroot.  Runs apt-get update having
-#                                copied the file in place.
+#                                build chroot. Runs apt-get update having
+#                                copied the file in place. See ADDITIONAL SOURCES below.
 #
 # --apt-config, -A <filename>  Additional apt configuration to copy into the
-#                              build chroot.  Runs apt-get update having copied
+#                              build chroot. Runs apt-get update having copied
 #                              the file in place.
 #
 # USAGE
@@ -101,6 +106,18 @@
 #
 # See apt_preferences(5) for more information.
 #
+# ADDITIONAL SOURCES
+#
+# If the build process requires additional sources for apt that are not in the
+# chroot itself, it is possible to add these in using the --sources-list
+# option. However, due to the very limited nature of schroot and sbuild, the
+# chroot must have sudo installed, and the user executing the build must have
+# NOPASSWD access to all commands. Usually this involves just adding
+#
+#   %sbuild ALL=(ALL:ALL) NOPASSWD:ALL
+#
+# to /etc/sudoers in the pristine chroot.
+#
 # BUGS
 #
 # Extra flags for sbuild and lintian cannot be passed.
@@ -133,6 +150,7 @@ components = "main"
 #
 origin = Socket.gethostname
 label = "Unknown"
+chroot = nil
 architecture = nil
 distribution = nil
 sources_list = nil
@@ -142,9 +160,10 @@ opts = GetoptLong.new(
   ['-h', '--help',    GetoptLong::NO_ARGUMENT],
   ['-m', '--manual', GetoptLong::NO_ARGUMENT],
   ['-s', '--strict', GetoptLong::NO_ARGUMENT],
-  ['-c', '--check', GetoptLong::NO_ARGUMENT],
+  ['-k', '--check', GetoptLong::NO_ARGUMENT],
   ['-u', '--update', GetoptLong::NO_ARGUMENT],
   ['-n', '--no-repo', GetoptLong::NO_ARGUMENT],
+  ['-c', '--chroot', GetoptLong::OPTIONAL_ARGUMENT],
   ['-a', '--architecture', GetoptLong::OPTIONAL_ARGUMENT],
   ['-d', '--distribution', GetoptLong::OPTIONAL_ARGUMENT],
   ['-O', '--origin', GetoptLong::OPTIONAL_ARGUMENT],
@@ -163,7 +182,7 @@ opts = GetoptLong.new(
       verbose = true
     when "-s"
       strict = true
-    when "-c"
+    when "-k"
       check = true
     when "-a"
       archtecture = arg
@@ -222,6 +241,7 @@ begin
   pkg.distribution = distribution if distribution
   pkg.sources_list = sources_list if sources_list
   pkg.apt_conf = apt_conf if apt_conf
+  pkg.chroot = chroot if chroot
   pkg.build
   pkg.check(strict) if check 
 
