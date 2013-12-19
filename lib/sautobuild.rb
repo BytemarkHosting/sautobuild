@@ -8,7 +8,7 @@ require 'zlib'
 
 class Sautobuild
 
-  attr_reader :build_dir, :source_dir, :sources_list, :apt_conf
+  attr_reader :build_dir, :source_dir, :sources_list, :apt_conf, :apt_key
   attr_writer :source, :update_chroot
 
   def initialize(dir)
@@ -239,6 +239,10 @@ class Sautobuild
 
         if self.sources_list
           cmd << "--chroot-setup-commands='sudo cp #{self.sources_list} /etc/apt/sources.list.d/'" 
+        end
+
+        if self.apt_key
+          cmd << "--chroot-setup-commands='sudo apt-key add #{self.apt_key}'" 
         end
 
         cmd << "--chroot-setup-commands='sudo apt-get update'"

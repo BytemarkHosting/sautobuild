@@ -50,11 +50,14 @@
 #
 # --sources-list, -S <filename>  Additional apt sources list to copy into the
 #                                build chroot. Runs apt-get update having
-#                                copied the file in place. See ADDITIONAL SOURCES below.
+#                                copied the file in place. See EXTRA APT CONFIG below.
 #
 # --apt-config, -A <filename>  Additional apt configuration to copy into the
 #                              build chroot. Runs apt-get update having copied
-#                              the file in place.
+#                              the file in place. See EXTRA APT CONFIG below.
+#
+# --apt-key, -K <filename>     Add a local GPG key for apt-get. See ADDITIONAL
+#                              SOURCES below.
 #
 # USAGE
 #
@@ -106,13 +109,14 @@
 #
 # See apt_preferences(5) for more information.
 #
-# ADDITIONAL SOURCES
+# EXTRA APT CONFIG
 #
-# If the build process requires additional sources for apt that are not in the
-# chroot itself, it is possible to add these in using the --sources-list
-# option. However, due to the very limited nature of schroot and sbuild, the
-# chroot must have sudo installed, and the user executing the build must have
-# NOPASSWD access to all commands. Usually this involves just adding
+# If the build process requires additional sources, keys or bits of
+# configuration for apt that are not in the chroot itself, it is possible to
+# add these on the command line. However, due to the very limited nature of
+# schroot and sbuild, the chroot must have sudo installed, and the user
+# executing the build must have NOPASSWD access to all commands.  Usually this
+# involves just adding
 #
 #   %sbuild ALL=(ALL:ALL) NOPASSWD:ALL
 #
@@ -155,6 +159,7 @@ architecture = nil
 distribution = nil
 sources_list = nil
 apt_conf = nil
+apt_key  = nil
 
 opts = GetoptLong.new(
   ['-h', '--help',    GetoptLong::NO_ARGUMENT],
@@ -170,7 +175,8 @@ opts = GetoptLong.new(
   ['-L', '--label', GetoptLong::OPTIONAL_ARGUMENT],
   ['-C', '--components', GetoptLong::OPTIONAL_ARGUMENT],
   ['-S', '--sources-list', GetoptLong::OPTIONAL_ARGUMENT],
-  ['-A', '--apt-config', GetoptLong::OPTIONAL_ARGUMENT]
+  ['-A', '--apt-config', GetoptLong::OPTIONAL_ARGUMENT],
+  ['-K', '--apt-key', GetoptLong::OPTIONAL_ARGUMENT]
 ).each do |opt,arg|
 
   case opt
@@ -202,6 +208,8 @@ opts = GetoptLong.new(
       sources_list = arg
     when "-A"
      apt_conf = arg
+    when "-K"
+     apt_key = arg
   end
 end
 
