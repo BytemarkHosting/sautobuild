@@ -2,12 +2,12 @@ Source: sautobuild
 Section: admin
 Priority: extra
 Maintainer: Patrick J Cherry <patrick@bytemark.co.uk>
-Build-Depends: debhelper (>= 7), txt2man, ruby, ruby1.8
+Build-Depends: debhelper (>= 7), txt2man, gem2deb 
 Standards-Version: 3.8.3
 
 Package: sautobuild
 Architecture: all
-Depends: sbuild, ruby, ruby1.8, dpkg-dev, ${shlibs:Depends}, ${misc:Depends}
+Depends: sbuild, ruby | ruby-interpreter, dpkg-dev, ${shlibs:Depends}, ${misc:Depends}
 Suggests: ubuntu-dev-tools
 Description: This automatically builds Debian packages for all available architectures
  This is the logical extension of sbuild, for use when building a package for
