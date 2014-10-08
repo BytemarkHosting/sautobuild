@@ -1,3 +1,10 @@
+sautobuild (0.9) stable; urgency=medium
+
+  * Added --bridge argument for sautotest
+  * Now use gem2deb for ruby build
+
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Wed, 08 Oct 2014 14:23:38 +0100
+
 sautobuild (0.8) stable; urgency=low
 
   * Added apt-config and source-list flags
