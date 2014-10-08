@@ -16,6 +16,7 @@ ${0}: Automatically run tests using a VM based on an lvm-snapshot schroot.
   -c, --chroot <chroot>
   -e, --external-d <directory>
   -p, --proxy <http_proxy>
+  -b, --bridge <bridge_interface>
 
 EOF
   exit 0
@@ -50,6 +51,8 @@ TEMP=$(getopt -o hc:e:p:s:v --long help,chroot,external-d:,proxy:,setup-d:,verbo
 # Note the quotes around `$TEMP': they are essential!
 eval set -- "$TEMP"
 
+BRIDGE_IF="br0"
+
 while true ; do
   case "$1" in
     -h|--help) show_help ;;
@@ -58,6 +61,7 @@ while true ; do
     -c|--chroot) SCHROOT=$2 ; shift ; shift ;;
     -e|--external-d) EXTERNAL_D=$2 ; shift ; shift ;;
     -p|--proxy) HTTP_PROXY=$2 ; shift ; shift ;;
+    -b|--bridge) BRIDGE_IF=$2 ; shift ; shift ;;
     --) shift ; break ;;
     *) echo "Unknown option $1" ; exit 1 ;;
   esac
@@ -184,7 +188,7 @@ fi
 mkdir $VERBOSE -p $STEMPDIR
 
 #
-# Copy our tests to $TMPDIR too.
+# Copy our tests to $STEMPDIR too.
 #
 mkdir -p $VERBOSE $STEMPDIR/sautotest.test.d
 mkdir -p $VERBOSE $STEMPDIR/sautotest.setup.d
@@ -242,12 +246,31 @@ eui64=$(printf "%02x%02x:%02x%02x:%02x%02x:%02x%02x" $((${maa[0]} | 0x2)) ${maa[
 echo "I: QEMU monitor listening on port $monitor_port"
 
 #
+# Configure our bridge interface script
+#
+cat > $STEMPDIR/if-up <<EOF
+#!/bin/sh
+
+/sbin/ifconfig \$1 0.0.0.0 up
+/sbin/brctl addif ${BRIDGE_IF} \$1
+EOF
+chmod +x $STEMPDIR/if-up
+
+cat > $STEMPDIR/if-down <<EOF
+#!/bin/sh
+
+/sbin/brctl delif ${BRIDGE_IF} \$1
+/sbin/ifconfig \$1 0.0.0.0 down
+EOF
+chmod +x $STEMPDIR/if-down 
+
+#
 # Start our VM..
 #
 echo "I: Starting the VM"
 sudo $QEMU -m 2048 \
   -drive file=$snapshot_device,if=virtio,index=0 \
-  -net nic,model=e1000,macaddr=$mac_address -net tap \
+  -net nic,model=e1000,macaddr=$mac_address -net tap,script=$STEMPDIR/if-up,downscript=$STEMPDIR/if-down \
   -pidfile $STEMPDIR/pid -monitor unix:$STEMPDIR/monitor,server,nowait \
   -kernel $STEMPDIR/vmlinuz -initrd $STEMPDIR/initrd.img \
   -boot c -nographic -enable-kvm \
