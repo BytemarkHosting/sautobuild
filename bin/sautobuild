@@ -58,6 +58,8 @@
 #
 # --apt-key, -K <filename>     Add a local GPG key for apt-get. See ADDITIONAL
 #                              SOURCES below.
+#                             
+# --sbuild-flags, -S flags     Add more flags for the sbuild process (HERE BE DRAGONS).
 #
 # USAGE
 #
@@ -160,6 +162,7 @@ distribution = nil
 sources_list = nil
 apt_conf = nil
 apt_key  = nil
+sbuild_flags = nil
 
 opts = GetoptLong.new(
   ['-h', '--help',    GetoptLong::NO_ARGUMENT],
@@ -176,7 +179,8 @@ opts = GetoptLong.new(
   ['-C', '--components', GetoptLong::OPTIONAL_ARGUMENT],
   ['-S', '--sources-list', GetoptLong::OPTIONAL_ARGUMENT],
   ['-A', '--apt-config', GetoptLong::OPTIONAL_ARGUMENT],
-  ['-K', '--apt-key', GetoptLong::OPTIONAL_ARGUMENT]
+  ['-K', '--apt-key', GetoptLong::OPTIONAL_ARGUMENT],
+  ['-S', '--sbuild-flags', GetoptLong::OPTIONAL_ARGUMENT]
 ).each do |opt,arg|
 
   case opt
@@ -210,6 +214,8 @@ opts = GetoptLong.new(
      apt_conf = arg
     when "-K"
      apt_key = arg
+    when "-S"
+     sbuild_flags = arg
   end
 end
 
@@ -250,6 +256,7 @@ begin
   pkg.sources_list = sources_list if sources_list
   pkg.apt_conf = apt_conf if apt_conf
   pkg.chroot = chroot if chroot
+  pkg.sbuild_flags = sbuild_flags if sbuild_flags
   pkg.build
   pkg.check(strict) if check 
 

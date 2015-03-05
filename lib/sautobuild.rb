@@ -9,7 +9,7 @@ require 'zlib'
 class Sautobuild
 
   attr_reader :build_dir, :source_dir, :sources_list, :apt_conf, :apt_key
-  attr_writer :source, :update_chroot
+  attr_writer :source, :update_chroot, :sbuild_flags
 
   def initialize(dir)
     raise "No build directory specified" if dir.to_s.empty?
@@ -22,7 +22,7 @@ class Sautobuild
     @version, @source, @distribution, @architecture = nil
     @architectures = @available_architectures = @available_distributions = []
     @available_architectures_by_distribution = Hash.new{|h,k| h[k] = []}
-    @sources_list = @apt_conf = @apt_key = nil
+    @sources_list = @apt_conf = @apt_key = @sbuild_flags = nil
   end
 
   def changelog; File.join(@source_dir, "debian", "changelog"); end
@@ -236,6 +236,9 @@ class Sautobuild
         built_all = true
       end
 
+     if sbuild_flags
+       cmd << sbuild_flags.to_s
+     end
 
       if self.apt_conf or self.sources_list
         cmd << "--no-apt-update"
