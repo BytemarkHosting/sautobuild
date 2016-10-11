@@ -33,11 +33,11 @@
 #
 # --chroot, -c <chroot>  Specify which chroot you wish the package to be built
 #                        in. This overrides the assumed defaults in sbuild.
-# 
+#
 # --origin, -O <origin>  Sets the Origin: field in the Release file of
 #                        the final repository. Defaults to the build machine's
 #                        hostname.
-# 
+#
 # --label, -L <label>    Sets the Label: field in the Release file.  Defaults
 #                        to "Unknown".
 #
@@ -54,8 +54,8 @@
 #
 # --apt-key, -K <filename>     Add a local GPG key for apt-get. See ADDITIONAL
 #                              SOURCES below.
-#                             
-# --use-gbp, -G                Use git-buildpackage. 
+#
+# --use-gbp, -G                Use git-buildpackage.
 #
 # USAGE
 #
@@ -157,18 +157,18 @@ require 'socket'
 
 def error(msg)
   STDERR.print "*** Error: #{msg}\n"
-  STDERR.print "*** For help, type: #{$0} -h\n"
+  STDERR.print "*** For help, type: {$PROGRAM_NAME} -h\n"
   exit 1
 end
 
 check = no_repo = help = manual = verbose = version = strict = update_chroot = false
 
-components = "main"
+components = 'main'
 #
 # Origin defaults to the hostname.
 #
 origin = Socket.gethostname
-label = "Unknown"
+label = 'Unknown'
 distribution = nil
 sources_list = nil
 apt_conf = nil
@@ -180,7 +180,7 @@ chroot = nil
 architecture = nil
 
 GetoptLong.new(
-  ['-h', '--help',    GetoptLong::NO_ARGUMENT],
+  ['-h', '--help', GetoptLong::NO_ARGUMENT],
   ['-m', '--manual', GetoptLong::NO_ARGUMENT],
   ['-s', '--strict', GetoptLong::NO_ARGUMENT],
   ['-c', '--chroot', GetoptLong::REQUIRED_ARGUMENT],
@@ -196,49 +196,48 @@ GetoptLong.new(
   ['-K', '--apt-key', GetoptLong::REQUIRED_ARGUMENT],
   ['-B', '--sbuild-flags', GetoptLong::REQUIRED_ARGUMENT],
   ['-G', '--use-gbp', GetoptLong::NO_ARGUMENT]
-).each do |opt,arg|
+).each do |opt, arg|
   sautobuild_opts << opt
   sautobuild_opts << arg unless arg.empty?
 
   case opt
-    when  "-h"
-      help = true
-    when "-m"
-      manual = true
-    when "-v"
-      verbose = true
-    when "-s"
-      strict = true
-    when "-c"
-      chroot = true
-    when "-k"
-      check = true
-    when "-a"
-      architecture = arg
-    when "-d"
-      distribution = arg
-    when "-u"
-      update_chroot = true
-    when "-n"
-      no_repo = true
-    when "-O"
-      origin = arg
-    when "-L"
-      label = arg
-    when "-C"
-      components = arg
-    when "-S"
-      sources_list = arg
-    when "-A"
-     apt_conf = arg
-    when "-K"
-     apt_key = arg
-    when "-B"
-     sbuild_flags = arg
-    when "-G"
-      use_gbp = true
+  when '-h'
+    help = true
+  when '-m'
+    manual = true
+  when '-v'
+    verbose = true
+  when '-s'
+    strict = true
+  when '-c'
+    chroot = true
+  when '-k'
+    check = true
+  when '-a'
+    architecture = arg
+  when '-d'
+    distribution = arg
+  when '-u'
+    update_chroot = true
+  when '-n'
+    no_repo = true
+  when '-O'
+    origin = arg
+  when '-L'
+    label = arg
+  when '-C'
+    components = arg
+  when '-S'
+    sources_list = arg
+  when '-A'
+    apt_conf = arg
+  when '-K'
+    apt_key = arg
+  when '-B'
+    sbuild_flags = arg
+  when '-G'
+    use_gbp = true
   end
-
 end
 
 source_dir    = ARGV.pop
@@ -246,30 +245,28 @@ builder_flags = ARGV unless ARGV.empty?
 
 # CAUTION! Kwality kode.
 #
-if manual or help
+if manual || help
   # Open the file, stripping the shebang line
-  lines = File.open(__FILE__){|fh| fh.readlines}[1..-1]
+  lines = File.open(__FILE__, &:readlines)[1..-1]
 
   found_synopsis = false
 
   lines.each do |line|
-
     line.chomp!
     break if line.empty?
 
-    if help and !found_synopsis
+    if help && !found_synopsis
       found_synopsis = (line =~ /^#\s+SYNOPSIS\s*$/)
       next
     end
 
     puts line[2..-1].to_s
 
-    break if help and found_synopsis and line =~ /^#\s*$/
-
+    break if help && found_synopsis && line =~ /^#\s*$/
   end
 end
 
-exit 0 if help or version or manual
+exit 0 if help || version || manual
 
 begin
   pkg = Sautobuild.new(source_dir)
@@ -281,12 +278,12 @@ begin
   pkg.architecture = architecture if architecture
   pkg.builder_flags = builder_flags if builder_flags
   pkg.use_gbp = use_gbp if use_gbp
-  pkg.sautobuild_opts = sautobuild_opts 
+  pkg.sautobuild_opts = sautobuild_opts
   pkg.build
-  pkg.check(strict) if check or strict
+  pkg.check(strict) if check || strict
 
   unless no_repo
-    pkg.make_repo(:label => label, :origin => origin, :components => components)
+    pkg.make_repo(label: label, origin: origin, components: components)
   end
 rescue StandardError => ex
   puts ex.backtrace.join("\n") if $DEBUG
