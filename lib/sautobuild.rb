@@ -8,19 +8,22 @@ require 'zlib'
 
 class Sautobuild
 
-  attr_reader :build_dir, :source_dir, :sources_list, :apt_conf
-  attr_writer :source, :update_chroot
+
+  attr_reader :build_dir, :source_dir, :sources_list, :apt_conf, :apt_key
+  attr_writer :source, :update_chroot, :builder_flags
 
   def initialize(dir)
-    raise Errno::ENOENT, dir unless File.exists?(dir)
+    raise "No build directory specified" if dir.to_s.empty?
+    raise Errno::ENOENT, dir unless File.exist?(dir)
     raise Errno::ENOTDIR, dir unless File.directory?(dir)
 
     @source_dir = File.expand_path(dir)
     @build_dir = File.expand_path(File.join(@source_dir, ".."))
     @update_chroot = false
     @version, @source, @distribution, @architecture = nil
-    @architectures = @available_architectures = @available_distributions = []
-    @sources_list = @apt_conf = nil
+    @architectures = @available_architectures = @available_distributions = @opts = @builder_flags = []
+    @available_architectures_by_distribution = Hash.new{|h,k| h[k] = []}
+    @sources_list = @apt_conf = @apt_key = nil
   end
 
   def changelog; File.join(@source_dir, "debian", "changelog"); end
@@ -78,6 +81,10 @@ class Sautobuild
     @architectures
   end
 
+  def sautobuild_opts=(a)
+    @opts=a
+  end
+
   def sources_list=(f)
     f = File.expand_path(f)
     raise Errno::ENOENT, f unless File.exists?(f)
@@ -121,12 +128,26 @@ class Sautobuild
     @available_architectures 
   end
 
+  def available_architectures_by_distribution
+    do_find_distributions_and_architectures if @available_architectures_by_distribution.keys.empty?
+    @available_architectures_by_distribution
+  end
+
+  def use_gbp=(f)
+    @use_gbp = !!f
+  end
+
   def build
-    do_build_source
-    do_build_debs
+    if @use_gbp
+      do_build_with_gbp
+    else
+      do_build_source
+      do_build_debs
+    end
   end
 
   def check(exit_if_fail = false)
+    puts "="*80+"\n"
     changes = (%w(source)+build_architectures).collect do |arch|
       File.join(@build_dir,@source+"_"+@version+"_"+arch+".changes")
     end
@@ -202,6 +223,29 @@ class Sautobuild
     @available_architectures = archs unless archs.empty?
   end
 
+  def do_build_with_gbp
+  	# Check to see if we're on a tagged commit.
+    tag = `git tag --contains`
+
+  	# If we're not do a "snapshot" build.
+    if tag.empty?
+      do_or_die("gbp dch --ignore-branch -S -a") 
+      @builder_flags << "--git-ignore-new"
+    end
+
+    # Remove flags that we don't want to be run twice.
+    gbp_sautobuild_opts = @opts - [ "-G", "-k", "-s" ]
+    gbp_sautobuild_opts.unshift("-n") unless gbp_sautobuild_opts.include?("-n")
+
+    cmd = %w(gbp buildpackage)
+    cmd += @builder_flags 
+    cmd << "--git-builder=#{$0}"
+    cmd += gbp_sautobuild_opts 
+    cmd << @source_dir
+
+    do_or_die(cmd.join(" "))
+  end
+
   def do_build_source
     puts "Building source package in #{@source_dir}"
     do_or_die("cd #{@build_dir}  && dpkg-source -I -b #{@source_dir}")
@@ -221,6 +265,9 @@ class Sautobuild
         built_all = true
       end
 
+      if @builder_flags
+        cmd += @builder_flags
+      end
 
       if self.apt_conf or self.sources_list
         cmd << "--no-apt-update"

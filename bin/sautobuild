@@ -5,9 +5,12 @@
 #
 # SYNOPSIS
 #   sautobuild [ --help | -h ] [ --manual | -m ] [ --distribution | -d <dist> ]
-#              [ --strict | -s ] [ --update | -u ] [ --origin | -O <origin> ]
-#              [ --label | -L <label> ] [ -n | --no-repo ] [ -c | --check ]
-#              [ --components | -C <components> ] <source directory>
+#     [ --chroot | -c <chroot> ] [ --strict | -s ] [ --update | -u ]
+#     [ --origin | -O <origin> ] [ --label | -L <label> ] [ -n | --no-repo ]
+#     [ -k | --check ] [ --components | -C <components> ]
+#     [ --sources-list | -S  <filename> ] [ --apt-config | -A <filename>]
+#     [ --apt-key | -K <filename> ] [ -G | --use-gbp ]
+#     [ -- <flags> ] <source directory>
 #
 # OPTIONS
 #
@@ -28,6 +31,9 @@
 #                        apt-get update to be run in the chroot before the
 #                        build starts.
 #
+# --chroot, -c <chroot>  Specify which chroot you wish the package to be built
+#                        in. This overrides the assumed defaults in sbuild.
+# 
 # --origin, -O <origin>  Sets the Origin: field in the Release file of
 #                        the final repository. Defaults to the build machine's
 #                        hostname.
@@ -43,8 +49,13 @@
 #                                copied the file in place.
 #
 # --apt-config, -A <filename>  Additional apt configuration to copy into the
-#                              build chroot.  Runs apt-get update having copied
-#                              the file in place.
+#                              build chroot. Runs apt-get update having copied
+#                              the file in place. See EXTRA APT CONFIG below.
+#
+# --apt-key, -K <filename>     Add a local GPG key for apt-get. See ADDITIONAL
+#                              SOURCES below.
+#                             
+# --use-gbp, -G                Use git-buildpackage. 
 #
 # USAGE
 #
@@ -64,7 +75,7 @@
 #
 # It is assumed that the schroots are named in a convention of
 # <distribution>-<architecture>, for example "stable-amd64", or "natty-i386".
-# Also, for archtecture-independent packages, there is a schroot just named
+# Also, for architecture-independent packages, there is a schroot just named
 # after the distribution, e.g. "stable", or "natty". Use the "aliases"
 # directive in your schroot configuration to do this.
 #
@@ -96,15 +107,45 @@
 #
 # See apt_preferences(5) for more information.
 #
+# EXTRA APT CONFIG
+#
+# If the build process requires additional sources, keys or bits of
+# configuration for apt that are not in the chroot itself, it is possible to
+# add these on the command line. However, due to the very limited nature of
+# schroot and sbuild, the chroot must have sudo installed, and the user
+# executing the build must have NOPASSWD access to all commands. Usually this
+# involves just adding
+#
+#   %sbuild ALL=(ALL:ALL) NOPASSWD:ALL
+#
+# to /etc/sudoers in the pristine chroot.
+#
+# USING GIT-BUILDPACKAGE
+#
+# If you pass the -G flag, git-buildpackage will be used, passing sautobuild
+# (and all its options) as the --git-builder flag.  If the topmost commit is
+# not tagged then a "snapshot" build will be created.
+#
+# PASSING FLAGS TO SBUILD OR GIT-BUILDPACKAGE
+#
+# It is possible to pass flags through to the underlying build mechnism, just
+# put them on after the null option '--'.  Note that the build directory always
+# has to be last.
+#
+# If using git-buildpackage, the flags do not get as far as sbuild.
+#
 # BUGS
 #
-# Extra flags for sbuild and lintian cannot be passed.
+# Extra flags for lintian cannot be passed.
+#
+# Only flags for git-buildpackage OR sbuild can be passed through.
 #
 # Release and changes files cannot be signed automatically.
 #
 # SEE ALSO
 #
-# sbuild(1), schroot(1), lintian(1), mk-sbuild(1), apt_preferences(5)
+# sbuild(1), schroot(1), lintian(1), mk-sbuild(1), apt_preferences(5),
+# gbp-buildpackage(1)
 #
 # AUTHOR
 #
@@ -120,7 +161,7 @@ def error(msg)
   exit 1
 end
 
-check = no_repo = help = manual = verbose = version = strict = update_chroot = do_make_repo = false
+check = no_repo = help = manual = verbose = version = strict = update_chroot = false
 
 components = "main"
 #
@@ -131,53 +172,77 @@ label = "Unknown"
 distribution = nil
 sources_list = nil
 apt_conf = nil
+apt_key  = nil
+sbuild_flags = nil
+use_gbp = nil
+sautobuild_opts = []
+chroot = nil
+architecture = nil
 
-opts = GetoptLong.new(
+GetoptLong.new(
   ['-h', '--help',    GetoptLong::NO_ARGUMENT],
   ['-m', '--manual', GetoptLong::NO_ARGUMENT],
   ['-s', '--strict', GetoptLong::NO_ARGUMENT],
-  ['-c', '--check', GetoptLong::NO_ARGUMENT],
+  ['-c', '--chroot', GetoptLong::REQUIRED_ARGUMENT],
+  ['-k', '--check', GetoptLong::NO_ARGUMENT],
   ['-u', '--update', GetoptLong::NO_ARGUMENT],
   ['-n', '--no-repo', GetoptLong::NO_ARGUMENT],
-  ['-d', '--distribution', GetoptLong::OPTIONAL_ARGUMENT],
-  ['-O', '--origin', GetoptLong::OPTIONAL_ARGUMENT],
-  ['-L', '--label', GetoptLong::OPTIONAL_ARGUMENT],
-  ['-C', '--components', GetoptLong::OPTIONAL_ARGUMENT],
-  ['-S', '--sources-list', GetoptLong::OPTIONAL_ARGUMENT],
-  ['-A', '--apt-config', GetoptLong::OPTIONAL_ARGUMENT]
+  ['-d', '--distribution', GetoptLong::REQUIRED_ARGUMENT],
+  ['-O', '--origin', GetoptLong::REQUIRED_ARGUMENT],
+  ['-L', '--label', GetoptLong::REQUIRED_ARGUMENT],
+  ['-C', '--components', GetoptLong::REQUIRED_ARGUMENT],
+  ['-S', '--sources-list', GetoptLong::REQUIRED_ARGUMENT],
+  ['-A', '--apt-config', GetoptLong::REQUIRED_ARGUMENT],
+  ['-K', '--apt-key', GetoptLong::REQUIRED_ARGUMENT],
+  ['-B', '--sbuild-flags', GetoptLong::REQUIRED_ARGUMENT],
+  ['-G', '--use-gbp', GetoptLong::NO_ARGUMENT]
 ).each do |opt,arg|
+  sautobuild_opts << opt
+  sautobuild_opts << arg unless arg.empty?
 
-case opt
-  when  "-h"
-    help = true
-  when "-m"
-    manual = true
-  when "-v"
-    verbose = true
-  when "-s"
-    strict = true
-  when "-c"
-    check = true
-  when "-d"
-    distribution = arg
-  when "-u"
-    update_chroot = true
-  when "-n"
-    no_repo = true
-  when "-O"
-    origin = arg
-  when "-L"
-    label = arg
-  when "-C"
-    components = arg
-  when "-S"
-    sources_list = arg
-  when "-A"
-    apt_conf = arg
+  case opt
+    when  "-h"
+      help = true
+    when "-m"
+      manual = true
+    when "-v"
+      verbose = true
+    when "-s"
+      strict = true
+    when "-c"
+      chroot = true
+    when "-k"
+      check = true
+    when "-a"
+      architecture = arg
+    when "-d"
+      distribution = arg
+    when "-u"
+      update_chroot = true
+    when "-n"
+      no_repo = true
+    when "-O"
+      origin = arg
+    when "-L"
+      label = arg
+    when "-C"
+      components = arg
+    when "-S"
+      sources_list = arg
+    when "-A"
+     apt_conf = arg
+    when "-K"
+     apt_key = arg
+    when "-B"
+     sbuild_flags = arg
+    when "-G"
+      use_gbp = true
   end
+
 end
 
-source_dir = ARGV.pop
+source_dir    = ARGV.pop
+builder_flags = ARGV unless ARGV.empty?
 
 # CAUTION! Kwality kode.
 #
@@ -212,8 +277,13 @@ begin
   pkg.distribution = distribution if distribution
   pkg.sources_list = sources_list if sources_list
   pkg.apt_conf = apt_conf if apt_conf
+  pkg.chroot = chroot if chroot
+  pkg.architecture = architecture if architecture
+  pkg.builder_flags = builder_flags if builder_flags
+  pkg.use_gbp = use_gbp if use_gbp
+  pkg.sautobuild_opts = sautobuild_opts 
   pkg.build
-  pkg.check(strict) if check 
+  pkg.check(strict) if check or strict
 
   unless no_repo
     pkg.make_repo(:label => label, :origin => origin, :components => components)
