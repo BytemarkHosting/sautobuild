@@ -1,3 +1,11 @@
+sautobuild (0.12) stable; urgency=medium
+
+  * Added git-buildpackage support.
+  * Rejigged build-flag handling, so extra options after "--" are treated as
+    "pass through" to either gbp buildpackage, or sbuild.
+
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Wed, 12 Oct 2016 10:12:52 +0100
+
 sautobuild (0.11) stable; urgency=medium
 
   * Added a --bridge option for networking
