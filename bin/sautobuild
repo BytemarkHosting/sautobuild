@@ -18,10 +18,15 @@
 #
 # --manual, -m           Show this manual
 #
+# --architecture, -a <arch>    Specify the architecture to build from, rather
+#                              than reading it from debian/control. It can be a
+#                              platform name, like "amd64" or "i386", or one of
+#                              "any" or "all".
+#
 # --distribution, -d <distro>  Specify the distribution rather than reading it
 #                              from debian/changelog
 #
-# --check, -c            Check packages using Lintian.
+# --check, -k            Check packages using Lintian.
 #
 # --strict, -s           Enable strict Lintian checking of produced packages.
 #                        Causes the build process to exit with the Lintian exit
@@ -45,8 +50,8 @@
 #                                file. Defaults to "main".
 #
 # --sources-list, -S <filename>  Additional apt sources list to copy into the
-#                                build chroot.  Runs apt-get update having
-#                                copied the file in place.
+#                                build chroot. Runs apt-get update having
+#                                copied the file in place. See EXTRA APT CONFIG below.
 #
 # --apt-config, -A <filename>  Additional apt configuration to copy into the
 #                              build chroot. Runs apt-get update having copied
@@ -56,7 +61,7 @@
 #                              SOURCES below.
 #
 # --use-gbp, -G                Use git-buildpackage.
-#
+#                             
 # USAGE
 #
 # This program can be used to create a Debian repository from a Debian source
@@ -170,6 +175,9 @@ components = 'main'
 #
 origin = Socket.gethostname
 label = 'Unknown'
+label = "Unknown"
+chroot = nil
+architecture = nil
 distribution = nil
 sources_list = nil
 apt_conf = nil
@@ -273,6 +281,7 @@ exit 0 if help || version || manual
 begin
   pkg = Sautobuild.new(source_dir)
   pkg.update_chroot = update_chroot
+  pkg.architecture = architecture if architecture
   pkg.distribution = distribution if distribution
   pkg.sources_list = sources_list if sources_list
   pkg.apt_conf = apt_conf if apt_conf
@@ -290,6 +299,7 @@ begin
 rescue StandardError => ex
   puts ex.backtrace.join("\n") if $DEBUG
   error(ex.to_s)
+  exit 1
 end
 
 exit 0

@@ -60,6 +60,13 @@ for i in {0..5} ; do
 done
 
 #
+# Make sure the proxy environment variables are set.
+#
+if [ -e /etc/profile.d/proxy ] ; then
+  source /etc/profile.d/proxy
+fi
+
+#
 # If there's a DEBUG flag, then just spawn a root login.
 #
 if [ -e /$SCHROOT_SCRIPT_DIR/DEBUG ] ; then
@@ -69,19 +76,11 @@ if [ -e /$SCHROOT_SCRIPT_DIR/DEBUG ] ; then
 fi
 
 #
-# Make sure the proxy environment variables are set.
-#
-if [ -e /etc/profile.d/proxy ] ; then
-  source /etc/profile.d/proxy
-fi
-
-#
 # If run-parts exits successfully, then set our status to pass.
 #
 echo "$SCHROOT_SCRIPT_NAME: Tests started at \$(date --rfc-2822)"
 /bin/run-parts $VERBOSE --new-session --exit-on-error /$SCHROOT_SCRIPT_DIR 
 echo "$SCHROOT_SCRIPT_NAME: Tests finshed at \$(date --rfc-2822)"
-
 
 #
 # Execute external tests

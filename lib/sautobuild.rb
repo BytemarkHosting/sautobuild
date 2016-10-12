@@ -76,7 +76,7 @@ class Sautobuild
       end
     end
 
-    fail ArgumentError, "No valid/available architectures found in #{as.inspect}"
+    fail ArgumentError, "No valid/available architectures found in #{archs.inspect}" if @architectures.empty?
 
     @architectures
   end
@@ -103,17 +103,24 @@ class Sautobuild
     File.join(@build_dir, source + '_' + version + '.dsc')
   end
 
+  def apt_key=(f)
+    f = File.expand_path(f)
+    raise Errno::ENOENT, f unless File.exists?(f)
+    @update_chroot = false
+    @apt_key = f
+  end
+
   def build_architectures
     build_archs = []
 
     architectures.each do |a|
       case a
-      when 'any'
-        build_archs += available_architectures
-      when 'all'
-        build_archs << `dpkg-architecture -qDEB_BUILD_ARCH_CPU`.chomp
+      when "any"
+        build_archs += available_architectures_by_distribution[distribution]
+      when "all"
+        build_archs << available_architectures_by_distribution[distribution].first
       else
-        build_archs << a if available_architectures.include?(a)
+        build_archs << a if available_architectures_by_distribution[distribution].include?(a)
       end
     end
 
@@ -137,6 +144,11 @@ class Sautobuild
 
   def use_gbp=(f)
     @use_gbp = !!f
+  end
+
+  def available_architectures_by_distribution
+    do_find_distributions_and_architectures if @available_architectures_by_distribution.keys.empty?
+    @available_architectures_by_distribution
   end
 
   def build
@@ -221,6 +233,7 @@ class Sautobuild
         dist = Regexp.last_match(1)
         arch = Regexp.last_match(2)
         next unless valid_architectures.include?(arch)
+        @available_architectures_by_distribution[dist] << arch unless @available_architectures_by_distribution[dist].include?(arch)
         dists << dist unless dists.include?(dist)
         archs << arch unless archs.include?(arch)
       end
@@ -283,6 +296,10 @@ class Sautobuild
 
         if sources_list
           cmd << "--chroot-setup-commands='sudo cp #{sources_list} /etc/apt/sources.list.d/'"
+        end
+
+        if apt_key
+          cmd << "--chroot-setup-commands='sudo apt-key add #{apt_key}'" 
         end
 
         cmd << "--chroot-setup-commands='sudo apt-get update'"

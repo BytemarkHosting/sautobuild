@@ -1,9 +1,22 @@
-sautobuild (0.9) stable; urgency=medium
+sautobuild (0.11) stable; urgency=medium
 
-  * Added --bridge argument for sautotest
-  * Now use gem2deb for ruby build
+  * Added a --bridge option for networking
+  * Use gem2deb to build
 
- -- Patrick J Cherry <patrick@bytemark.co.uk>  Wed, 08 Oct 2014 14:23:38 +0100
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Wed, 08 Oct 2014 14:26:06 +0100
+
+sautobuild (0.10) stable; urgency=low
+
+  * Fixed broken architecture option
+  * Now builds only for architectures availible for a particular distro.
+
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Thu, 12 Sep 2013 10:44:18 +0100
+
+sautobuild (0.9) stable; urgency=low
+
+  * Added architecture option to sautobuild.
+
+ -- Patrick J Cherry <patrick@bytemark.co.uk>  Thu, 01 Aug 2013 12:53:37 +0100
 
 sautobuild (0.8) stable; urgency=low
 
