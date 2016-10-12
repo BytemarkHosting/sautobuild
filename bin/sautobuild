@@ -176,7 +176,6 @@ components = 'main'
 #
 origin = Socket.gethostname
 label = 'Unknown'
-label = 'Unknown'
 chroot = nil
 architecture = nil
 distribution = nil
