@@ -61,7 +61,7 @@
 #                              SOURCES below.
 #
 # --use-gbp, -G                Use git-buildpackage.
-#                             
+#
 # USAGE
 #
 # This program can be used to create a Debian repository from a Debian source
@@ -175,7 +175,7 @@ components = 'main'
 #
 origin = Socket.gethostname
 label = 'Unknown'
-label = "Unknown"
+label = 'Unknown'
 chroot = nil
 architecture = nil
 distribution = nil

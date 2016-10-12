@@ -105,7 +105,7 @@ class Sautobuild
 
   def apt_key=(f)
     f = File.expand_path(f)
-    raise Errno::ENOENT, f unless File.exists?(f)
+    fail Errno::ENOENT, f unless File.exist?(f)
     @update_chroot = false
     @apt_key = f
   end
@@ -115,9 +115,9 @@ class Sautobuild
 
     architectures.each do |a|
       case a
-      when "any"
+      when 'any'
         build_archs += available_architectures_by_distribution[distribution]
-      when "all"
+      when 'all'
         build_archs << available_architectures_by_distribution[distribution].first
       else
         build_archs << a if available_architectures_by_distribution[distribution].include?(a)
@@ -144,11 +144,6 @@ class Sautobuild
 
   def use_gbp=(f)
     @use_gbp = !!f
-  end
-
-  def available_architectures_by_distribution
-    do_find_distributions_and_architectures if @available_architectures_by_distribution.keys.empty?
-    @available_architectures_by_distribution
   end
 
   def build
@@ -299,7 +294,7 @@ class Sautobuild
         end
 
         if apt_key
-          cmd << "--chroot-setup-commands='sudo apt-key add #{apt_key}'" 
+          cmd << "--chroot-setup-commands='sudo apt-key add #{apt_key}'"
         end
 
         cmd << "--chroot-setup-commands='sudo apt-get update'"
