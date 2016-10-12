@@ -43,7 +43,7 @@
 #                        the final repository. Defaults to the build machine's
 #                        hostname.
 #
-# --label, -L <label>    Sets the Label: field in the Release file.  Defaults
+# --label, -L <label>    Sets the Label: field in the Release file. Defaults
 #                        to "Unknown".
 #
 # --components, -C <components>  Sets the Components: field in the Release
@@ -51,7 +51,8 @@
 #
 # --sources-list, -S <filename>  Additional apt sources list to copy into the
 #                                build chroot. Runs apt-get update having
-#                                copied the file in place. See EXTRA APT CONFIG below.
+#                                copied the file in place. See EXTRA APT CONFIG
+#                                below.
 #
 # --apt-config, -A <filename>  Additional apt configuration to copy into the
 #                              build chroot. Runs apt-get update having copied
@@ -125,16 +126,16 @@
 #
 # to /etc/sudoers in the pristine chroot.
 #
-# USING GIT-BUILDPACKAGE
+# USING GIT BUILDPACKAGE
 #
-# If you pass the -G flag, git-buildpackage will be used, passing sautobuild
-# (and all its options) as the --git-builder flag.  If the topmost commit is
-# not tagged then a "snapshot" build will be created.
+# If you pass the -G flag, gbp-buildpackage(1) will be used, passing sautobuild
+# (and all its options) as the --git-builder flag. If the topmost commit is not
+# tagged then a "snapshot" build will be created.
 #
-# PASSING FLAGS TO SBUILD OR GIT-BUILDPACKAGE
+# PASSING FLAGS TO SBUILD OR GBP BUILDPACKAGE
 #
 # It is possible to pass flags through to the underlying build mechnism, just
-# put them on after the null option '--'.  Note that the build directory always
+# put them on after the null option '--'. Note that the build directory always
 # has to be last.
 #
 # If using git-buildpackage, the flags do not get as far as sbuild.
