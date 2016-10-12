@@ -1,10 +1,10 @@
 #!/usr/bin/ruby
 #
 # NAME
-#   sautobuild -- automatically build a multi-arch Debian repository using sbuild
+#  sautobuild -- automatically build a multi-arch Debian repository using sbuild
 #
 # SYNOPSIS
-#   sautobuild [ --help | -h ] [ --manual | -m ] [ --distribution | -d <dist> ]
+#  sautobuild [ --help | -h ] [ --manual | -m ] [ --distribution | -d <dist> ]
 #     [ --chroot | -c <chroot> ] [ --strict | -s ] [ --update | -u ]
 #     [ --origin | -O <origin> ] [ --label | -L <label> ] [ -n | --no-repo ]
 #     [ -k | --check ] [ --components | -C <components> ]
@@ -161,7 +161,8 @@ def error(msg)
   exit 1
 end
 
-check = no_repo = help = manual = verbose = version = strict = update_chroot = false
+check = no_repo = help = manual = verbose = false
+version = strict = update_chroot = false
 
 components = 'main'
 #
@@ -178,6 +179,7 @@ use_gbp = nil
 sautobuild_opts = []
 chroot = nil
 architecture = nil
+builder_flags = nil
 
 GetoptLong.new(
   ['-h', '--help', GetoptLong::NO_ARGUMENT],
