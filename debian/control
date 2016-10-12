@@ -7,7 +7,7 @@ Standards-Version: 3.8.3
 
 Package: sautobuild
 Architecture: all
-Depends: sbuild, ruby | ruby-interpreter, dpkg-dev, ${shlibs:Depends}, ${misc:Depends}
+Depends: sbuild, ruby | ruby-interpreter, dpkg-dev, git-buildpackage (>= 0.6.22), ${shlibs:Depends}, ${misc:Depends}
 Suggests: ubuntu-dev-tools
 Description: This automatically builds Debian packages for all available architectures
  This is the logical extension of sbuild, for use when building a package for
